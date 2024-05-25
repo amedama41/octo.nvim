@@ -83,24 +83,26 @@ function PullRequest:get_changed_files(callback)
         utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
-        local results = vim.fn.json_decode(output)
         local files = {}
-        for _, result in ipairs(results) do
-          local entry = FileEntry:new {
-            path = result.filename,
-            previous_path = result.previous_filename,
-            patch = result.patch,
-            pull_request = self,
-            status = utils.file_status_map[result.status],
-            stats = {
-              additions = result.additions,
-              deletions = result.deletions,
-              changes = result.changes,
-            },
-          }
-          table.insert(files, entry)
+        for _, output_line in ipairs(vim.split(output, "\n", { plain = true })) do
+          local results = vim.fn.json_decode(output_line)
+          for _, result in ipairs(results) do
+            local entry = FileEntry:new {
+              path = result.filename,
+              previous_path = result.previous_filename,
+              patch = result.patch,
+              pull_request = self,
+              status = utils.file_status_map[result.status],
+              stats = {
+                additions = result.additions,
+                deletions = result.deletions,
+                changes = result.changes,
+              },
+            }
+            table.insert(files, entry)
+          end
+          callback(files)
         end
-        callback(files)
       end
     end,
   }
