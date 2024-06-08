@@ -88,6 +88,9 @@ function OctoBuffer:render_repo()
   self:clear()
   writers.write_repo(self.bufnr, self.node)
 
+  -- drop undo history
+  utils.clear_history(self.bufnr)
+
   -- reset modified option
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
 
@@ -217,7 +220,7 @@ function OctoBuffer:render_issue()
   end
 
   -- drop undo history
-  utils.clear_history()
+  utils.clear_history(self.bufnr)
 
   -- reset modified option
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
@@ -229,6 +232,10 @@ end
 function OctoBuffer:render_threads(threads)
   self:clear()
   writers.write_threads(self.bufnr, threads)
+
+  -- drop undo history
+  utils.clear_history(self.bufnr)
+
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
   self.ready = true
 end
@@ -338,6 +345,9 @@ function OctoBuffer:save()
       end
     end
   end
+
+  -- drop undo history
+  utils.clear_history(self.bufnr)
 
   -- reset modified option
   vim.api.nvim_buf_set_option(bufnr, "modified", false)

@@ -479,7 +479,7 @@ function M.add_comment()
   end
 
   -- drop undo history
-  utils.clear_history()
+  utils.clear_history(bufnr)
 end
 
 function M.delete_comment()

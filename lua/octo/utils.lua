@@ -805,14 +805,12 @@ function M.in_diff_window(bufnr)
 end
 
 -- clear buffer undo history
-function M.clear_history()
-  if true then
-    return
-  end
-  local old_undolevels = vim.o.undolevels
-  vim.o.undolevels = -1
-  vim.cmd [[exe "normal a \<BS>"]]
-  vim.o.undolevels = old_undolevels
+function M.clear_history(bufnr)
+  local old_undolevels = vim.bo[bufnr].undolevels
+  vim.bo[bufnr].undolevels = -1
+  vim.api.nvim_buf_set_lines(bufnr, -1, -1, true, { " " })
+  vim.api.nvim_buf_set_lines(bufnr, -2, -1, true, {})
+  vim.bo[bufnr].undolevels = old_undolevels
 end
 
 function M.clamp(value, min, max)
