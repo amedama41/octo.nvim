@@ -121,7 +121,7 @@ function Layout:set_file(file, focus)
     -- set focus on specified window
     if focus == "right" then
       vim.api.nvim_set_current_win(self.right_winid)
-    else
+    elseif focus == "left" then
       vim.api.nvim_set_current_win(self.left_winid)
     end
   end
