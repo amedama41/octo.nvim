@@ -139,6 +139,12 @@ return {
   prev_thread = function()
     require("octo.reviews.file-panel").prev_thread()
   end,
+  open_thread = function()
+    require("octo.reviews.thread-panel").show_review_threads()
+  end,
+  close_thread = function()
+    require("octo.reviews.thread-panel").hide_review_threads()
+  end,
   select_next_entry = function()
     local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then

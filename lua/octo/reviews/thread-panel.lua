@@ -4,7 +4,6 @@ local utils = require "octo.utils"
 local M = {}
 
 function M.show_review_threads()
-  -- This function is called from a very broad CursorHold event
   -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
@@ -66,7 +65,7 @@ function M.show_review_threads()
       local thread_winid = review.layout.thread_winid
       if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
         review.layout.thread_winid = vim.api.nvim_open_win(
-          thread_buffer.bufnr, false, {
+          thread_buffer.bufnr, true, {
             relative = "win",
             win = alt_win,
             anchor = "NW",
@@ -75,6 +74,7 @@ function M.show_review_threads()
             row = 1,
             col = 1,
             border = "single",
+            zindex = 3,
           }
         )
       else
@@ -92,6 +92,20 @@ function M.show_review_threads()
       vim.api.nvim_win_close(thread_winid, true)
       review.layout.thread_winid = -1
     end
+  end
+end
+
+function M.hide_review_threads()
+  local review = require("octo.reviews").get_current_review()
+  if not review then
+    -- cant find an active review
+    return
+  end
+
+  local thread_winid = review.layout.thread_winid
+  if thread_winid ~= -1 or vim.api.nvim_win_is_valid(thread_winid) then
+    vim.api.nvim_win_close(thread_winid, true)
+    review.layout.thread_winid = -1
   end
 end
 
