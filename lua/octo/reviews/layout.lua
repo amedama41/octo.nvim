@@ -22,6 +22,7 @@ local win_reset_opts = {
 ---@field file_panel FilePanel
 ---@field left_winid integer
 ---@field right_winid integer
+---@field thread_winid integer
 ---@field files FileEntry[]
 ---@field file_idx integer
 ---@field ready boolean
@@ -34,6 +35,7 @@ function Layout:new(opt)
   local this = {
     left = opt.left,
     right = opt.right,
+    thread_winid = -1,
     files = opt.files,
     file_idx = 1,
     ready = false,

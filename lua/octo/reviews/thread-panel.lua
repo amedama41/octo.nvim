@@ -60,32 +60,37 @@ function M.show_review_threads()
   if #threads_at_cursor > 0 then
     review.layout:ensure_layout()
     local alt_win = file:get_alternative_win(split)
-    if vim.api.nvim_win_is_valid(alt_win) then
-      local thread_buffer = M.create_thread_buffer(threads_at_cursor, pr.repo, pr.number, split, file.path)
-      if thread_buffer then
-        table.insert(file.associated_bufs, thread_buffer.bufnr)
-        vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
-        thread_buffer:configure()
-        vim.api.nvim_buf_call(thread_buffer.bufnr, function()
-          vim.cmd [[diffoff!]]
-          pcall(vim.cmd, "normal ]c")
-        end)
+    local thread_buffer = M.create_thread_buffer(threads_at_cursor, pr.repo, pr.number, split, file.path)
+    if thread_buffer then
+      table.insert(file.associated_bufs, thread_buffer.bufnr)
+      local thread_winid = review.layout.thread_winid
+      if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
+        review.layout.thread_winid = vim.api.nvim_open_win(
+          thread_buffer.bufnr, false, {
+            relative = "win",
+            win = alt_win,
+            anchor = "NW",
+            width = vim.api.nvim_win_get_width(alt_win) - 4,
+            height = vim.api.nvim_win_get_height(alt_win) - 4,
+            row = 1,
+            col = 1,
+            border = "single",
+          }
+        )
+      else
+        vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
       end
+      thread_buffer:configure()
+      vim.api.nvim_buf_call(thread_buffer.bufnr, function()
+        pcall(vim.cmd, "normal ]c")
+      end)
     end
   else
     -- no threads at the current line, hide the thread buffer
-    local alt_buf = file:get_alternative_buf(split)
-    local alt_win = file:get_alternative_win(split)
-    local cur_win = file:get_win(split)
-    if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
-      local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
-      if current_alt_bufnr ~= alt_buf then
-        -- if we are not showing the corresponging alternative diff buffer, do so
-        vim.api.nvim_win_set_buf(alt_win, alt_buf)
-
-        -- show the diff
-        file:show_diff()
-      end
+    local thread_winid = review.layout.thread_winid
+    if thread_winid ~= -1 or vim.api.nvim_win_is_valid(thread_winid) then
+      vim.api.nvim_win_close(thread_winid, true)
+      review.layout.thread_winid = -1
     end
   end
 end
