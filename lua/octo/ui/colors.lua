@@ -94,6 +94,7 @@ local function get_hl_links()
     Float = "NormalFloat",
     TimelineItemHeading = "Comment",
     TimelineMarker = "Identifier",
+    TimelineSeparator = "Comment",
     Symbol = "Comment",
     Date = "Comment",
     DetailsLabel = "Title",
@@ -110,6 +111,9 @@ local function get_hl_links()
     DiffstatAdditions = "OctoGreen ",
     DiffstatDeletions = "OctoRed ",
     DiffstatNeutral = "OctoGrey",
+    ThreadPanelFloat = "NormalFloat",
+    ThreadPanelFloatBoarder = "FloatBorder",
+    ThreadPanelSignColumn = "SignColumn",
 
     StateOpen = "OctoGreen",
     StateClosed = "OctoRed",
@@ -149,6 +153,12 @@ function M.setup()
 
   for from, to in pairs(get_hl_links()) do
     vim.cmd("hi def link Octo" .. from .. " " .. to)
+  end
+
+  for _, type in pairs({ "Review", "Thread", "ThreadComment", "Comment", "Event" }) do
+    for _, group in pairs({ "TimelineItemHeading", "TimelineMarker", "TimelineSeparator" }) do
+      vim.cmd("hi def link Octo" .. group .. "." .. type .. " Octo" .. group)
+    end
   end
 end
 

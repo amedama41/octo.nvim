@@ -403,6 +403,11 @@ function Review:add_comment(isSuggestion)
             zindex = 3,
           }
         )
+        vim.wo[self.layout.thread_winid].winhighlight = vim.iter({
+          "NormalFloat:OctoThreadPanelFloat",
+          "FloatBorder:OctoThreadPanelFloatBoarder",
+          "SignColumn:OctoThreadPanelSignColumn",
+        }):join(",")
       else
         vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
       end

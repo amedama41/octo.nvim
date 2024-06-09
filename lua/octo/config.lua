@@ -44,6 +44,13 @@ local M = {}
 ---@class OctoMissingScopeConfig
 ---@field projects_v2 boolean
 
+---@class OctoSeparatorConfig
+---@field comment string
+---@field review string
+---@field thread string
+---@field thread_comment string
+---@field event string
+
 ---@class OctoConfig Octo configuration settings
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
@@ -56,7 +63,8 @@ local M = {}
 ---@field outdated_icon string
 ---@field resolved_icon string
 ---@field timeline_marker string
----@field timeline_indent string
+---@field timeline_indent number
+---@field timeline_separators OctoSeparatorConfig
 ---@field right_bubble_delimiter string
 ---@field left_bubble_delimiter string
 ---@field github_hostname string
@@ -99,7 +107,14 @@ function M.get_default_values()
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
     timeline_marker = " ",
-    timeline_indent = "2",
+    timeline_indent = 0,
+    timeline_separators = {
+      comment = "=",
+      review = "=",
+      thread = "-",
+      thread_comment = "- ",
+      event = " ",
+    },
     right_bubble_delimiter = "",
     left_bubble_delimiter = "",
     github_hostname = "",
@@ -397,7 +412,7 @@ function M.validate_config()
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")
     validate_type(config.timeline_marker, "timeline_marker", "string")
-    validate_type(config.timeline_indent, "timeline_indent", "string")
+    validate_type(config.timeline_indent, "timeline_indent", "number")
     validate_type(config.right_bubble_delimiter, "right_bubble_delimiter", "string")
     validate_type(config.left_bubble_delimiter, "left_bubble_delimiter", "string")
     validate_type(config.github_hostname, "github_hostname", "string")

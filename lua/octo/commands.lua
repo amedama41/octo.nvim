@@ -606,7 +606,7 @@ local function update_review_thread_header(bufnr, thread, thread_id, thread_line
     commit = commit_id,
     isOutdated = thread.isOutdated,
     isResolved = thread.isResolved,
-  }, thread_line - 2)
+  }, thread_line - 1)
   local threads = thread.pullRequest.reviewThreads.nodes
   local review = reviews.get_current_review()
   if review then
