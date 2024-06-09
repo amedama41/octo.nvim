@@ -580,20 +580,8 @@ function M.delete_comment()
             local bufname = vim.api.nvim_buf_get_name(bufnr)
             local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
             if split then
-              local layout = reviews.get_current_review().layout
-              local file = layout:cur_file()
-              local diff_win = file:get_win(split)
-              local thread_win = file:get_alternative_win(split)
-              local original_buf = file:get_alternative_buf(split)
-              -- move focus to the split containing the diff buffer
-              -- restore the diff buffer so that window is not closed when deleting thread buffer
-              vim.api.nvim_win_set_buf(thread_win, original_buf)
-              -- delete the thread buffer
+              review.layout.thread_winid = -1
               pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-              -- refresh signs and virtual text
-              file:place_signs()
-              -- diff buffers
-              file:show_diff()
             end
           end
         end

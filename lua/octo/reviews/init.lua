@@ -388,8 +388,24 @@ function Review:add_comment(isSuggestion)
     local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
-      vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
-      vim.api.nvim_set_current_win(alt_win)
+      local thread_winid = self.layout.thread_winid
+      if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
+        self.layout.thread_winid = vim.api.nvim_open_win(
+          thread_buffer.bufnr, true, {
+            relative = "win",
+            win = alt_win,
+            anchor = "NW",
+            width = vim.api.nvim_win_get_width(alt_win) - 4,
+            height = vim.api.nvim_win_get_height(alt_win) - 4,
+            row = 1,
+            col = 1,
+            border = "single",
+            zindex = 3,
+          }
+        )
+      else
+        vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
+      end
       if isSuggestion then
         local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1 - 1, line2, false)
         local suggestion = { "```suggestion" }
@@ -399,7 +415,6 @@ function Review:add_comment(isSuggestion)
         vim.api.nvim_buf_set_option(thread_buffer.bufnr, "modified", false)
       end
       thread_buffer:configure()
-      vim.cmd [[diffoff!]]
       vim.cmd [[normal! vvGk]]
       vim.cmd [[startinsert]]
     end
