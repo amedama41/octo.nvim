@@ -27,10 +27,14 @@ function M.show_review_threads()
   local pr = file.pull_request
   local review_level = review:get_level()
   local threads = vim.tbl_values(review.threads)
+  table.sort(threads, function(t1, t2)
+    return t1.startLine < t2.startLine
+  end)
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   -- get threads associated with current line
   local threads_at_cursor = {}
+  local index = 1
   for _, thread in ipairs(threads) do
     if
       review_level == "PR"
@@ -39,6 +43,9 @@ function M.show_review_threads()
       and thread.line >= line
     then
       table.insert(threads_at_cursor, thread)
+      if math.abs(thread.startLine - line) < math.abs(threads_at_cursor[index].startLine - line) then
+        index = #threads_at_cursor
+      end
     elseif review_level == "COMMIT" then
       local commit
       if split == "LEFT" then
@@ -49,6 +56,7 @@ function M.show_review_threads()
       for _, comment in ipairs(thread.comments.nodes) do
         if commit == comment.originalCommit.oid and thread.originalLine == line then
           table.insert(threads_at_cursor, thread)
+          index = 1
           break
         end
       end
@@ -59,7 +67,7 @@ function M.show_review_threads()
   if #threads_at_cursor > 0 then
     review.layout:ensure_layout()
     local alt_win = file:get_alternative_win(split)
-    local thread_buffer = M.create_thread_buffer(threads_at_cursor, pr.repo, pr.number, split, file.path)
+    local thread_buffer = M.create_thread_buffer(index, threads_at_cursor, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
       local thread_winid = review.layout.thread_winid
@@ -84,6 +92,7 @@ function M.show_review_threads()
         }):join(",")
       else
         vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
+        vim.api.nvim_set_current_win(thread_winid)
       end
       thread_buffer:configure()
       vim.api.nvim_buf_call(thread_buffer.bufnr, function()
@@ -114,12 +123,12 @@ function M.hide_review_threads()
   end
 end
 
-function M.create_thread_buffer(threads, repo, number, side, path)
+function M.create_thread_buffer(index, threads, repo, number, side, path)
   local current_review = require("octo.reviews").get_current_review()
   if not vim.startswith(path, "/") then
     path = "/" .. path
   end
-  local line = threads[1].originalStartLine ~= vim.NIL and threads[1].originalStartLine or threads[1].originalLine
+  local line = threads[index].originalStartLine ~= vim.NIL and threads[index].originalStartLine or threads[index].originalLine
   local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
   local bufnr = vim.fn.bufnr(bufname)
   local buffer

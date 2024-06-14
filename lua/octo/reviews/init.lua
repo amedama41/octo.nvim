@@ -261,7 +261,11 @@ end
 
 function Review:show_pending_comments()
   local pending_threads = {}
-  for _, thread in ipairs(vim.tbl_values(self.threads)) do
+  local threads = vim.tbl_values(self.threads)
+  table.sort(threads, function(t1, t2)
+    return t1.startLine < t2.startLine
+  end)
+  for _, thread in ipairs(threads) do
     for _, comment in ipairs(thread.comments.nodes) do
       if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(utils.trim(comment.body)) then
         table.insert(pending_threads, thread)
@@ -385,7 +389,7 @@ function Review:add_comment(isSuggestion)
 
     -- TODO: if there are threads for that line, there should be a buffer already showing them
     -- or maybe not if the user is very quick
-    local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
+    local thread_buffer = thread_panel.create_thread_buffer(1, threads, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
       local thread_winid = self.layout.thread_winid

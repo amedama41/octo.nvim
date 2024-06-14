@@ -353,6 +353,9 @@ function FileEntry:place_signs()
 
     -- place thread comments signs and virtual text
     local threads = vim.tbl_values(current_review.threads)
+    table.sort(threads, function(t1, t2)
+      return t1.startLine < t2.startLine
+    end)
     for _, thread in ipairs(threads) do
       local startLine, endLine = thread.startLine, thread.line
       if review_level == "COMMIT" then
