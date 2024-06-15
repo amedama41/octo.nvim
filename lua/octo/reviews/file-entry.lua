@@ -5,7 +5,6 @@ local config = require "octo.config"
 local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
-local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
 local vim = vim
 
@@ -324,6 +323,7 @@ end
 
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
+  local conf = config.values
   local current_review = require("octo.reviews").get_current_review()
   local review_level = current_review:get_level()
   local splits = {
@@ -339,15 +339,16 @@ function FileEntry:place_signs()
     },
   }
   for _, split in ipairs(splits) do
-    signs.unplace(split.bufnr)
     vim.api.nvim_buf_clear_namespace(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
 
     -- place comment range signs
     if split.comment_ranges then
       for _, range in ipairs(split.comment_ranges) do
-        for line = range[1], range[2] do
-          signs.place("octo_comment_range", split.bufnr, line - 1)
-        end
+        vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, range[1] - 1, -1, {
+          end_row = range[2] - 1,
+          strict = false,
+          number_hl_group = "OctoGreen",
+        })
       end
     end
 
@@ -363,30 +364,32 @@ function FileEntry:place_signs()
         endLine = thread.originalLine
       end
 
-      local sign = "octo_thread"
+      local sign_hl_group = "OctoBlue"
       if thread.isOutdated then
-        sign = sign .. "_outdated"
+        sign_hl_group = "OctoRed"
       elseif thread.isResolved then
-        sign = sign .. "_resolved"
+        sign_hl_group = "OctoGreen"
       end
 
-      for _, comment in ipairs(thread.comments.nodes) do
+      for _, comment in ipairs(vim.iter(thread.comments.nodes):rev():totable()) do
         if comment.state == "PENDING" then
-          sign = sign .. "_pending"
+          sign_hl_group = "OctoYellow"
         end
         if
           (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
           or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
         then
           -- for lines between startLine and endLine, place the sign
-          for line = startLine, endLine do
-            signs.place(sign, split.bufnr, line - 1)
-          end
+          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, {
+            end_row = endLine - 1,
+            strict = false,
+            sign_text = conf.comment_icon,
+            sign_hl_group = sign_hl_group,
+          })
 
           -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
-          local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-          --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
+          local vt_msg = string.format("%2d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
           local opts = {
             virt_text = { { vt_msg, "Comment" } },
             virt_text_pos = "right_align",
