@@ -11,16 +11,6 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
-      it("should return invalid when picker isn't a string", function()
-        config.values.picker = false
-        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
-      end)
-
-      it("should return invalid when picker isn't valid", function()
-        config.values.picker = "other"
-        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
-      end)
-
       it("should return invalid when picker_config isn't a table", function()
         config.values.picker_config = "cfg"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)

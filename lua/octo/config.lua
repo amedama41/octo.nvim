@@ -3,7 +3,6 @@ local M = {}
 
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
 ---@alias OctoMappingsList { [string]: table}
----@alias OctoPickers "telescope" | "fzf-lua"
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean
@@ -54,7 +53,6 @@ local M = {}
 ---@field event string
 
 ---@class OctoConfig Octo configuration settings
----@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
 ---@field default_merge_method string
@@ -90,7 +88,6 @@ local M = {}
 ---@return OctoConfig
 function M.get_default_values()
   return {
-    picker = "telescope",
     picker_config = {
       use_emojis = false,
       mappings = {
@@ -340,20 +337,6 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    local valid_pickers = { "telescope", "fzf-lua" }
-    if not validate_type(config.picker, "picker", "string") then
-      return
-    end
-    if not vim.tbl_contains(valid_pickers, config.picker) then
-      err(
-        "picker." .. config.picker,
-        string.format(
-          "Expected a valid picker, received '%s', which is not a supported picker! Valid pickers: ",
-          config.picker,
-          table.concat(valid_pickers, ", ")
-        )
-      )
-    end
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
     end

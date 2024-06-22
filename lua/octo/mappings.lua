@@ -12,17 +12,17 @@ return {
     local buffer = octo_buffers[bufnr]
     local repo = buffer.repo
     if repo then
-      require("octo.picker").issues { repo = repo }
+      require("octo.pickers.telescope.provider").issues { repo = repo }
     end
   end,
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,
   list_commits = function()
-    require("octo.picker").commits()
+    require("octo.pickers.telescope.provider").commits()
   end,
   list_changed_files = function()
-    require("octo.picker").changed_files()
+    require("octo.pickers.telescope.provider").changed_files()
   end,
   show_pr_diff = function()
     require("octo.commands").show_pr_diff()

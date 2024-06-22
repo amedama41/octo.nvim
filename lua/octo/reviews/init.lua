@@ -292,7 +292,7 @@ function Review:show_pending_comments()
     utils.error "No pending comments found"
     return
   else
-    require("octo.picker").pending_threads(pending_threads)
+    require("octo.pickers.telescope.provider").pending_threads(pending_threads)
   end
 end
 

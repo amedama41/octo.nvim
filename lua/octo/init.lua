@@ -7,7 +7,6 @@ local completion = require "octo.completion"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
-local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local signs = require "octo.ui.signs"
 local window = require "octo.ui.window"
@@ -36,7 +35,6 @@ function M.setup(user_config)
   end
 
   signs.setup()
-  picker.setup()
   completion.setup()
   folds.setup()
   autocmds.setup()

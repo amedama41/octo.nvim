@@ -2,7 +2,7 @@ local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
-local picker = require "octo.picker"
+local picker = require "octo.pickers.telescope.provider"
 local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
 local writers = require "octo.ui.writers"
@@ -754,7 +754,7 @@ function M.create_issue(repo)
   local templates = utils.get_repo_templates(repo)
   if not utils.is_blank(templates) and #templates.issueTemplates > 0 then
     ---@param selected IssueTemplate
-    require("octo.picker").issue_templates(templates.issueTemplates, function(selected)
+    picker.issue_templates(templates.issueTemplates, function(selected)
       M.save_issue {
         repo = repo,
         base_title = selected.title,
