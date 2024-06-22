@@ -1808,7 +1808,7 @@ query($endCursor: String) {
 ---@alias PullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueComment|PullRequestReview
 
 ---@class PullRequest_: PullRequestBase
----@field isDraft boolean? TODO
+---@field isDraft boolean
 ---@field repository { nameWithOwner: string }
 ---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }?
 ---@field viewerDidAuthor boolean
@@ -3337,6 +3337,7 @@ M.create_pr_mutation = [[
     createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
       pullRequest {
         id
+        isDraft
         number
         state
         title
