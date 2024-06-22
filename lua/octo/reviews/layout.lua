@@ -45,6 +45,7 @@ function Layout:new(opt)
   return this
 end
 
+---@param review Review
 function Layout:open(review)
   vim.cmd "tab split"
   self.tabpage = vim.api.nvim_get_current_tabpage()
@@ -80,6 +81,7 @@ function Layout:init_layout()
   self.file_panel:open()
 end
 
+---@return FileEntry|nil
 function Layout:cur_file()
   if #self.files > 0 then
     return self.files[utils.clamp(self.file_idx, 1, #self.files)]
@@ -88,6 +90,8 @@ function Layout:cur_file()
 end
 
 -- sets selected file
+---@param file FileEntry
+---@param focus "left"|"right"?
 function Layout:set_file(file, focus)
   self:ensure_layout()
   if self:file_safeguard() or not file then
@@ -135,12 +139,14 @@ function Layout:update_files()
   self.file_panel:render()
   self.file_panel:redraw()
   local file = self:cur_file()
-  self:set_file(file)
+  if file then
+    self:set_file(file)
+  end
   self.update_needed = false
 end
 
 ---Checks the state of the view layout.
----@return table
+---@return { valid: boolean, tabpage: boolean, left_win: boolean, right_win: boolean }
 function Layout:validate_layout()
   local state = {
     tabpage = vim.api.nvim_tabpage_is_valid(self.tabpage),
@@ -152,7 +158,7 @@ function Layout:validate_layout()
 end
 
 ---Recover the layout after the user has messed it up.
----@param state table
+---@param state { valid: boolean, tabpage: boolean, left_win: boolean, right_win: boolean }
 function Layout:recover_layout(state)
   self.ready = false
   if not state.tabpage then

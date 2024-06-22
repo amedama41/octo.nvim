@@ -10,7 +10,7 @@ local vim = vim
 
 local M = {}
 
----@type table
+---@type table<string, integer>
 M._null_buffer = {}
 
 ---@class GitStats
@@ -20,12 +20,12 @@ M._null_buffer = {}
 
 ---@class FileEntry
 ---@field path string
----@field previous_path string
+---@field previous_path string?
 ---@field basename string
 ---@field extension string
 ---@field pull_request PullRequest
 ---@field status string
----@field patch string
+---@field patch string?
 ---@field stats GitStats
 ---@field left_binary boolean|nil
 ---@field right_binary boolean|nil
@@ -48,8 +48,18 @@ FileEntry.winopts = {
   foldlevel = 0,
 }
 
+---@class FileEntryOpt
+---@field pull_request PullRequest
+---@field path string
+---@field previous_path string?
+---@field patch string?
+---@field status "A"|"D"|"M"|"R"
+---@field stats { additions: integer, deletions: integer, changes: integer }
+---@field left_binary boolean?
+---@field right_binary boolean?
+
 ---FileEntry constructor
----@param opt table
+---@param opt FileEntryOpt
 ---@return FileEntry
 function FileEntry:new(opt)
   local pr = opt.pull_request
@@ -124,8 +134,8 @@ function FileEntry:destroy()
 end
 
 ---Get the window id for the alternative side of the provided buffer
----@param split string
----@return integer
+---@param split "LEFT"|"RIGHT"
+---@return integer?
 function FileEntry:get_alternative_win(split)
   if split:lower() == "left" then
     return self.right_winid
@@ -135,8 +145,8 @@ function FileEntry:get_alternative_win(split)
 end
 
 ---Get the buffer id for the alternative side of the provided buffer
----@param split string
----@return integer
+---@param split "LEFT"|"RIGHT"
+---@return integer?
 function FileEntry:get_alternative_buf(split)
   if split:lower() == "left" then
     return self.right_bufid
@@ -146,8 +156,8 @@ function FileEntry:get_alternative_buf(split)
 end
 
 ---Get the window id for the side of the provided buffer
----@param split string
----@return integer
+---@param split "LEFT"|"RIGHT"
+---@return integer?
 function FileEntry:get_win(split)
   if split:lower() == "left" then
     return self.left_winid
@@ -157,8 +167,8 @@ function FileEntry:get_win(split)
 end
 
 ---Get the buffer id for the side of the provided buffer
----@param split string
----@return integer
+---@param split "LEFT"|"RIGHT"
+---@return integer?
 function FileEntry:get_buf(split)
   if split:lower() == "left" then
     return self.left_bufid
@@ -168,10 +178,12 @@ function FileEntry:get_buf(split)
 end
 
 ---Fetch file content locally or from GitHub.
+---@return boolean
 function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
@@ -325,6 +337,10 @@ end
 function FileEntry:place_signs()
   local conf = config.values
   local current_review = require("octo.reviews").get_current_review()
+  if current_review == nil then
+    return
+  end
+
   local review_level = current_review:get_level()
   local splits = {
     {
@@ -353,6 +369,7 @@ function FileEntry:place_signs()
     end
 
     -- place thread comments signs and virtual text
+    ---@type PullRequestReviewThread[]
     local threads = vim.tbl_values(current_review.threads)
     table.sort(threads, function(t1, t2)
       return t1.startLine < t2.startLine
@@ -406,8 +423,11 @@ function FileEntry:place_signs()
   end
 end
 
+---@param opts { status: string, show_diff: boolean, path: string, split: "left"|"right", binary: boolean, lines: string[], repo: string, use_local: boolean }
+---@return integer
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
   local bufnr
   if opts.use_local then
     -- Use the file from the file system
@@ -439,11 +459,14 @@ function M._create_buffer(opts)
   return bufnr
 end
 
+---@param left_winid integer
+---@param right_winid integer
 function M.load_null_buffers(left_winid, right_winid)
   M.load_null_buffer(left_winid)
   M.load_null_buffer(right_winid)
 end
 
+---@param winid integer
 function M.load_null_buffer(winid)
   local bn = M._get_null_buffer()
   if vim.api.nvim_win_is_valid(winid) then
@@ -452,6 +475,7 @@ function M.load_null_buffer(winid)
   M._configure_buffer(bn)
 end
 
+---@return integer
 function M._get_null_buffer()
   local msg = "Loading ..."
   local bn = M._null_buffer[msg]
@@ -471,6 +495,8 @@ function M._get_null_buffer()
   return M._null_buffer[msg]
 end
 
+---@param left_winid integer
+---@param right_winid integer
 function M._configure_windows(left_winid, right_winid)
   for _, id in ipairs { left_winid, right_winid } do
     for k, v in pairs(FileEntry.winopts) do
@@ -479,6 +505,7 @@ function M._configure_windows(left_winid, right_winid)
   end
 end
 
+---@param bufid integer
 function M._configure_buffer(bufid)
   utils.apply_mappings("review_diff", bufid)
   -- local conf = config.values
@@ -488,6 +515,7 @@ function M._configure_buffer(bufid)
   -- vim.cmd(string.format("vnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
 end
 
+---@param bufid integer
 function M._detach_buffer(bufid)
   local conf = config.values
   for _, lhs in pairs(conf.mappings.review_diff) do

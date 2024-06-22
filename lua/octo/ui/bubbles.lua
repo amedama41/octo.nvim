@@ -7,6 +7,20 @@ local colors = require "octo.ui.colors"
 -- background. The bubble shape gets especially defined by the outer delimiters.
 -- An examplary usage in this plugin are for label assigned to an issue.
 
+---@class BubbleOpts
+---@field margin_width integer?
+---@field right_margin_width integer?
+---@field left_margin_width integer?
+---@field padding_width integer?
+---@field right_padding_width integer?
+---@field left_padding_width integer?
+---@field icon_position string?
+---@field icon string?
+
+---@param content string
+---@param highlight_group string
+---@param opts BubbleOpts?
+---@return string[][]
 local function make_bubble(content, highlight_group, opts)
   opts = opts or {}
   local conf = config.values
@@ -36,6 +50,9 @@ local function make_bubble(content, highlight_group, opts)
   end
 end
 
+---@param name string
+---@param is_viewer boolean
+---@param opts BubbleOpts?
 local function make_user_bubble(name, is_viewer, opts)
   opts = opts or {}
   local conf = config.values
@@ -52,6 +69,9 @@ local function make_user_bubble(name, is_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
+---@param icon string
+---@param includes_viewer boolean
+---@param opts BubbleOpts?
 local function make_reaction_bubble(icon, includes_viewer, opts)
   local conf = config.values
   local highlight = includes_viewer and "OctoReactionViewer" or "OctoReaction"
@@ -60,6 +80,10 @@ local function make_reaction_bubble(icon, includes_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
+---@param name string
+---@param color string?
+---@param opts { right_margin_width: integer }?
+---@return string[][]
 local function make_label_bubble(name, color, opts)
   -- provide a default highlight group incase color is nil.
   local highlight = "NormalFloat"

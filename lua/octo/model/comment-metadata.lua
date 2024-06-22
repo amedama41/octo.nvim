@@ -7,26 +7,51 @@ local M = {}
 ---@field body string
 ---@field dirty boolean
 ---@field extmark integer
----@field startLine integer
----@field endLine integer
+---@field startLine integer?
+---@field endLine integer?
 ---@field namespace integer
 ---@field reactionGroups table[]
 ---@field reactionLine integer
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
 ---@field viewerDidAuthor boolean
----@field kind string
----@field replyTo string
----@field replyToRest string
----@field reviewId string
----@field path string
----@field diffSide string
----@field snippetStartLine integer
----@field snippetEndLine integer
+---@field kind "IssueComment"|"PullRequestComment"|"PullRequestReview"|"PullRequestReviewComment"
+---@field replyTo { id: string, url: string }?
+---@field replyToRest string?
+---@field reviewId string?
+---@field path string?
+---@field diffSide string?
+---@field snippetStartLine integer?
+---@field snippetEndLine integer?
+---@field bufferStartLine integer?
+---@field bufferEndLine integer?
 local CommentMetadata = {}
 CommentMetadata.__index = CommentMetadata
 
+---@class CommentMetadataOpts
+---@field id string
+---@field author string
+---@field savedBody string
+---@field body string
+---@field dirty boolean
+---@field extmark integer
+---@field namespace integer
+---@field reactionGroups table[]
+---@field reactionLine integer
+---@field viewerCanUpdate boolean
+---@field viewerCanDelete boolean
+---@field viewerDidAuthor boolean
+---@field kind "IssueComment"|"PullRequestComment"|"PullRequestReview"|"PullRequestReviewComment"
+---@field replyTo { id: string, url: string }?
+---@field replyToRest string?
+---@field reviewId string?
+---@field path string?
+---@field diffSide DiffSide?
+---@field snippetStartLine integer?
+---@field snippetEndLine integer?
+
 ---CommentMetadata constructor.
+---@param opts CommentMetadataOpts
 ---@return CommentMetadata
 function CommentMetadata:new(opts)
   local this = {

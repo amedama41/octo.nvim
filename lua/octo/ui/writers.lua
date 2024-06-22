@@ -11,6 +11,11 @@ local vim = vim
 
 local M = {}
 
+---@param bufnr integer
+---@param lines string|string[]
+---@param line integer?
+---@param mark boolean?
+---@return integer?
 function M.write_block(bufnr, lines, line, mark)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   line = line or vim.api.nvim_buf_line_count(bufnr) + 1
@@ -52,18 +57,24 @@ function M.write_block(bufnr, lines, line, mark)
   end
 end
 
+---@param details string[][]
+---@param label string
+---@param value boolean|integer|string|Label|Label[]|(fun(): string?)?
+---@param kind string?
 local function add_details_line(details, label, value, kind)
   if type(value) == "function" then
     value = value()
   end
   if value ~= vim.NIL and value ~= nil then
     if kind == "date" then
+      assert(type(value) == "string")
       value = utils.format_date(value)
     end
     local vt = { { label .. ": ", "OctoDetailsLabel" } }
     if kind == "label" then
       vim.list_extend(vt, bubbles.make_label_bubble(value.name, value.color, { right_margin_width = 1 }))
     elseif kind == "labels" then
+      assert(type(value) == "table")
       for _, v in ipairs(value) do
         if v ~= vim.NIL and v ~= nil then
           vim.list_extend(vt, bubbles.make_label_bubble(v.name, v.color, { right_margin_width = 1 }))
@@ -76,6 +87,8 @@ local function add_details_line(details, label, value, kind)
   end
 end
 
+---@param bufnr integer
+---@param repo Repository
 function M.write_repo(bufnr, repo)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
 
@@ -172,6 +185,9 @@ function M.write_repo(bufnr, repo)
   end
 end
 
+---@param bufnr integer
+---@param title string
+---@param line integer
 function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, { title, "" }, line, true)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
@@ -186,6 +202,9 @@ function M.write_title(bufnr, title, line)
   end
 end
 
+---@param bufnr integer
+---@param state IssueState|PullRequestState?
+---@param number integer?
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -210,6 +229,9 @@ function M.write_state(bufnr, state, number)
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
+---@param bufnr integer
+---@param issue Issue|PullRequest_
+---@param line integer?
 function M.write_body(bufnr, issue, line)
   local body = utils.trim(issue.body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
@@ -219,6 +241,7 @@ function M.write_body(bufnr, issue, line)
   local lines = vim.split(description, "\n", true)
   vim.list_extend(lines, { "" })
   local desc_mark = M.write_block(bufnr, lines, line, true)
+  assert(type(desc_mark) == "number")
   local buffer = octo_buffers[bufnr]
   if buffer then
     buffer.bodyMetadata = BodyMetadata:new {
@@ -231,6 +254,10 @@ function M.write_body(bufnr, issue, line)
   end
 end
 
+---@param bufnr integer
+---@param reaction_groups ReactionGroup[]
+---@param line integer
+---@return integer?
 function M.write_reactions(bufnr, reaction_groups, line)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
@@ -253,6 +280,9 @@ function M.write_reactions(bufnr, reaction_groups, line)
   end
 end
 
+---@param bufnr integer
+---@param issue IssueBase|PullRequestBase
+---@param update boolean?
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
@@ -501,6 +531,12 @@ function M.write_details(bufnr, issue, update)
   end
 end
 
+---@param bufnr integer
+---@param comment PullRequestReview|PullRequestReviewCommentForPRReviewThread|PullRequestReviewCommentForPRReview|IssueComment
+---@param kind "PullRequestReview"|"PullRequestReviewComment"|"PullRequestComment"|"IssueComment"
+---@param line integer?
+---@return integer
+---@return integer
 function M.write_comment(bufnr, comment, kind, line)
   -- possible kinds:
   ---- IssueComment
@@ -525,6 +561,7 @@ function M.write_comment(bufnr, comment, kind, line)
 
   local separator = nil
   if kind == "PullRequestReview" then
+    ---@cast comment PullRequestReview
     -- Review top-level comments
     local state_bubble =
       bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state] .. "Bubble")
@@ -542,6 +579,7 @@ function M.write_comment(bufnr, comment, kind, line)
     end
     separator = { string.rep(conf.timeline_separators.review, 240), "OctoTimelineSeparator.Review" }
   elseif kind == "PullRequestReviewComment" then
+    ---@class comment PullRequestReviewCommentForPRReviewThread
     -- Review thread comments
     local state_bubble =
       bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
@@ -560,6 +598,7 @@ function M.write_comment(bufnr, comment, kind, line)
     end
     separator = { string.rep(conf.timeline_separators.thread_comment, 240), "OctoTimelineSeparator.ThreadComment" }
   elseif kind == "PullRequestComment" then
+    ---@cast comment PullRequestReviewCommentForPRReview
     -- Regular comment for a review thread comments
     table.insert(
       header_vt,
@@ -573,6 +612,7 @@ function M.write_comment(bufnr, comment, kind, line)
     end
     separator = { string.rep(conf.timeline_separators.comment, 240), "OctoTimelineSeparator.Comment" }
   elseif kind == "IssueComment" then
+    ---@cast comment IssueComment
     -- Issue comments
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker.Comment" })
     table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading.Comment" })
@@ -645,6 +685,9 @@ function M.write_comment(bufnr, comment, kind, line)
   return start_line, line - 1
 end
 
+---@param diffhunk_lines string[]
+---@return integer|unknown
+---@return integer
 local function find_snippet_range(diffhunk_lines)
   local conf = config.values
   local context_lines = conf.snippet_context_lines or 4
@@ -684,6 +727,8 @@ local function find_snippet_range(diffhunk_lines)
   return snippet_start, snippet_end
 end
 
+---@param opts { left_line: integer?, right_line: integer?, max_lnum: integer }
+---@return string[][]?
 local function get_lnum_chunks(opts)
   if not opts.left_line and opts.right_line then
     return {
@@ -719,6 +764,12 @@ local function get_lnum_chunks(opts)
   end
 end
 
+---@param bufnr integer
+---@param diffhunk string
+---@param start_line integer?
+---@param comment_start integer
+---@param comment_end integer
+---@param comment_side DiffSide
 function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
   -- this function will print a diff snippet from the diff hunk.
   -- we need to use the original positions for comment_start and comment_end
@@ -863,6 +914,9 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   return start_line, line
 end
 
+---@param bufnr integer
+---@param opts { path: string, start_line: integer, end_line: integer, isOutdated: boolean, isResolved: boolean, resolvedBy: { login: string }, commit: string }
+---@param line integer?
 function M.write_review_thread_header(bufnr, opts, line)
   line = line or vim.api.nvim_buf_line_count(bufnr) - 1
 
@@ -915,6 +969,10 @@ function M.write_review_thread_header(bufnr, opts, line)
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt, separator)
 end
 
+---@param bufnr integer
+---@param reactions table<ReactionContent, string[]>
+---@return integer
+---@return integer
 function M.write_reactions_summary(bufnr, reactions)
   local lines = {}
   local max_width = math.floor(vim.fn.winwidth(0) * 0.4)
@@ -935,6 +993,9 @@ function M.write_reactions_summary(bufnr, reactions)
   return #lines, max_length
 end
 
+---@param max_length integer
+---@param chunk string[][]
+---@return integer
 local function chunk_length(max_length, chunk)
   local length = 0
   for _, c in ipairs(chunk) do
@@ -943,6 +1004,11 @@ local function chunk_length(max_length, chunk)
   return math.max(max_length, length)
 end
 
+---@param bufnr integer
+---@param user UserProfile
+---@param opts { max_width: integer }?
+---@return integer
+---@return integer
 function M.write_user_profile(bufnr, user, opts)
   opts = opts or {}
   local max_width = opts.max_width or 80
@@ -1074,6 +1140,9 @@ function M.write_user_profile(bufnr, user, opts)
   return #chunks, max_length
 end
 
+---@param bufnr integer
+---@param issue IssueSummary|PullRequestSummary
+---@param opts { max_length: integer }
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local conf = config.values
@@ -1147,12 +1216,16 @@ function M.write_issue_summary(bufnr, issue, opts)
   return #chunks
 end
 
+---@param bufnr integer
+---@param vt string[][]
 local function write_event(bufnr, vt)
   local line = vim.api.nvim_buf_line_count(bufnr) - 1
   M.write_block(bufnr, { "" }, line + 2)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line + 1, vt)
 end
 
+---@param bufnr integer
+---@param item AssignedEvent
 function M.write_assigned_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1170,6 +1243,8 @@ function M.write_assigned_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item PullRequestCommit
 function M.write_commit_event(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -1194,6 +1269,8 @@ function M.write_commit_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item MergedEvent
 function M.write_merged_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1213,6 +1290,8 @@ function M.write_merged_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item ClosedEvent
 function M.write_closed_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1229,11 +1308,15 @@ function M.write_closed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param items LabeledEvent[]
+---@param action "added"|"removed"
 function M.write_labeled_events(bufnr, items, action)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
   --   item.actor.login == vim.g.octo_viewer
   -- )
+  ---@type table<string|vim.NIL, Label[]>
   local labels_by_actor = {}
   for _, item in ipairs(items) do
     local key = item.actor ~= vim.NIL and item.actor.login or vim.NIL
@@ -1243,6 +1326,7 @@ function M.write_labeled_events(bufnr, items, action)
   end
 
   for _, actor in ipairs(vim.tbl_keys(labels_by_actor)) do
+    ---@type string[][]
     local vt = {}
     local conf = config.values
     table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker.Event" })
@@ -1264,6 +1348,8 @@ function M.write_labeled_events(bufnr, items, action)
   end
 end
 
+---@param bufnr integer
+---@param item ReopenedEvent
 function M.write_reopened_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1280,6 +1366,8 @@ function M.write_reopened_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item ReviewRequestedEvent
 function M.write_review_requested_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1302,6 +1390,8 @@ function M.write_review_requested_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item ReviewRequestedRemovedEvent
 function M.write_review_request_removed_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1323,6 +1413,8 @@ function M.write_review_request_removed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item ReviewDismissedEvent
 function M.write_review_dismissed_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1344,6 +1436,9 @@ function M.write_review_dismissed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param threads PullRequestReviewThread[]
+---@return integer
 function M.write_threads(bufnr, threads)
   local comment_start, comment_end
 
@@ -1405,6 +1500,11 @@ function M.write_threads(bufnr, threads)
   return comment_end
 end
 
+---@param bufnr integer
+---@param ns integer
+---@param line integer
+---@param chunks string[][]
+---@param separator string[]?
 function M.write_virtual_text(bufnr, ns, line, chunks, separator)
   local opts = {
     virt_text = chunks,

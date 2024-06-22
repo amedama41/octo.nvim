@@ -8,12 +8,15 @@ local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
 
+---@param opts { preview_title: string }
 local issue = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry IssueEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry IssueEntry
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
@@ -31,12 +34,15 @@ local issue = defaulter(function(opts)
             if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+              ---@type PullRequestQueryResponse|IssueQueryResponse
               local result = vim.fn.json_decode(output)
               local obj
               if entry.kind == "issue" then
                 obj = result.data.repository.issue
               elseif entry.kind == "pull_request" then
                 obj = result.data.repository.pullRequest
+              else
+                assert(false, "never reach at this line")
               end
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
@@ -54,12 +60,15 @@ local issue = defaulter(function(opts)
   }
 end)
 
+---@param opts { preview_title: string }
 local gist = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry GistEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry GistEntry
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
@@ -77,13 +86,16 @@ local gist = defaulter(function(opts)
   }
 end)
 
+---@param opts { preview_title: string, repo: string }
 local commit = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
     keep_last_buf = true,
+    ---@param entry GitCommitEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry GitCommitEntry
     define_preview = function(self, entry)
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
         local lines = {}
@@ -113,13 +125,16 @@ local commit = defaulter(function(opts)
   }
 end, {})
 
+---@param opts { preview_title: string }
 local changed_files = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
     keep_last_buf = true,
+    ---@param entry GitChangedFile
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry GitChangedFile
     define_preview = function(self, entry)
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
         local diff = entry.change.patch
@@ -132,12 +147,15 @@ local changed_files = defaulter(function(opts)
   }
 end, {})
 
+---@param opts { preview_title: string }
 local review_thread = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry ReviewThreadEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry ReviewThreadEntry
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
@@ -155,12 +173,15 @@ local review_thread = defaulter(function(opts)
   }
 end, {})
 
+---@param opts { preview_title: string }
 local issue_template = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry IssueTemplateEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry IssueTemplateEntry
     define_preview = function(self, entry)
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
         local template = entry.template.body

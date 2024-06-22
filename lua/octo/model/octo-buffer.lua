@@ -14,19 +14,30 @@ local M = {}
 
 ---@class OctoBuffer
 ---@field bufnr integer
----@field number integer
----@field repo string
----@field kind string
+---@field number integer?
+---@field repo string?
+---@field kind "pull"|"issue"|"repo"|"reviewthread"
 ---@field titleMetadata TitleMetadata
 ---@field bodyMetadata BodyMetadata
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
----@field node table
----@field taggable_users string[]
+---@field node PullRequest_|Issue|Repository?
+---@field taggable_users string[]?
+---@field owner string?
+---@field name string?
 local OctoBuffer = {}
 OctoBuffer.__index = OctoBuffer
 
+---@class OctoBufferOpts
+---@field bufnr integer
+---@field number integer?
+---@field repo string?
+---@field node PullRequest_|Issue|Repository?
+---@field commentsMetadata CommentMetadata[]?
+---@field threadsMetadata ThreadMetadata[]?
+
 ---OctoBuffer constructor.
+---@param opts OctoBufferOpts
 ---@return OctoBuffer
 function OctoBuffer:new(opts)
   local this = {
@@ -62,6 +73,7 @@ M.OctoBuffer = OctoBuffer
 
 ---Apply the buffer mappings
 function OctoBuffer:apply_mappings()
+  ---@type OctoMappingsWindow
   local kind = self.kind
   if self.kind == "pull" then
     kind = "pull_request"
@@ -86,7 +98,9 @@ end
 ---Writes a repo to the buffer
 function OctoBuffer:render_repo()
   self:clear()
-  writers.write_repo(self.bufnr, self.node)
+  local node = self.node
+  ---@cast node Repository
+  writers.write_repo(self.bufnr, node)
 
   -- drop undo history
   utils.clear_history(self.bufnr)
@@ -100,36 +114,41 @@ end
 ---Writes an issue or pull request to the buffer.
 function OctoBuffer:render_issue()
   self:clear()
+  local node = self.node
+  ---@cast node Issue|PullRequest_
 
   -- write title
-  writers.write_title(self.bufnr, self.node.title, 1)
+  writers.write_title(self.bufnr, node.title, 1)
 
   -- write details in buffer
-  writers.write_details(self.bufnr, self.node)
+  writers.write_details(self.bufnr, node)
 
   -- write issue/pr status
-  writers.write_state(self.bufnr, self.node.state:upper(), self.number)
+  writers.write_state(self.bufnr, node.state:upper(), self.number)
 
   -- write body
-  writers.write_body(self.bufnr, self.node)
+  writers.write_body(self.bufnr, node)
 
   -- write body reactions
   local reaction_line
-  if utils.count_reactions(self.node.reactionGroups) > 0 then
+  if utils.count_reactions(node.reactionGroups) > 0 then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_block(self.bufnr, { "", "" }, line)
-    reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
+    reaction_line = writers.write_reactions(self.bufnr, node.reactionGroups, line)
   end
-  self.bodyMetadata.reactionGroups = self.node.reactionGroups
+  self.bodyMetadata.reactionGroups = node.reactionGroups
   self.bodyMetadata.reactionLine = reaction_line
 
   -- write timeline items
+  ---@type LabeledEvent[]
   local unrendered_labeled_events = {}
+  ---@type UnlabeledEvent[]
   local unrendered_unlabeled_events = {}
   local prev_is_event = false
 
+  ---@type (IssueTimelineItems|PullRequestTimelineItems)[]
   local timeline_nodes = {}
-  for _, item in ipairs(self.node.timelineItems.nodes) do
+  for _, item in ipairs(node.timelineItems.nodes) do
     if item ~= vim.NIL then
       table.insert(timeline_nodes, item)
     end
@@ -148,6 +167,7 @@ function OctoBuffer:render_issue()
     end
 
     if item.__typename == "IssueComment" then
+      ---@cast item IssueComment
       if prev_is_event then
         writers.write_block(self.bufnr, { "" })
       end
@@ -157,14 +177,16 @@ function OctoBuffer:render_issue()
       folds.create(self.bufnr, start_line + 1, end_line, true)
       prev_is_event = false
     elseif item.__typename == "PullRequestReview" then
+      ---@cast item PullRequestReview
       if prev_is_event then
         writers.write_block(self.bufnr, { "" })
       end
 
       -- A review can have 0+ threads
+      ---@type PullRequestReviewThread[]
       local threads = {}
       for _, comment in ipairs(item.comments.nodes) do
-        for _, reviewThread in ipairs(self.node.reviewThreads.nodes) do
+        for _, reviewThread in ipairs(node.reviewThreads.nodes) do
           if comment.id == reviewThread.comments.nodes[1].id then
             -- found a thread for the current review
             table.insert(threads, reviewThread)
@@ -186,31 +208,41 @@ function OctoBuffer:render_issue()
         prev_is_event = false
       end
     elseif item.__typename == "AssignedEvent" then
+      ---@cast item AssignedEvent
       writers.write_assigned_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "PullRequestCommit" then
+      ---@cast item PullRequestCommit
       writers.write_commit_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "MergedEvent" then
+      ---@cast item MergedEvent
       writers.write_merged_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ClosedEvent" then
+      ---@cast item ClosedEvent
       writers.write_closed_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ReopenedEvent" then
+      ---@cast item ReopenedEvent
       writers.write_reopened_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "LabeledEvent" then
+      ---@cast item LabeledEvent
       table.insert(unrendered_labeled_events, item)
     elseif item.__typename == "UnlabeledEvent" then
+      ---@cast item UnlabeledEvent
       table.insert(unrendered_unlabeled_events, item)
     elseif item.__typename == "ReviewRequestedEvent" then
+      ---@cast item ReviewRequestedEvent
       writers.write_review_requested_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ReviewRequestRemovedEvent" then
+      ---@cast item ReviewRequestedRemovedEvent
       writers.write_review_request_removed_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ReviewDismissedEvent" then
+      ---@cast item ReviewDismissedEvent
       writers.write_review_dismissed_event(self.bufnr, item)
       prev_is_event = true
     end
@@ -229,6 +261,7 @@ function OctoBuffer:render_issue()
 end
 
 ---Draws review threads
+---@param threads PullRequestReviewThread[]
 function OctoBuffer:render_threads(threads)
   self:clear()
   writers.write_threads(self.bufnr, threads)
@@ -259,6 +292,29 @@ function OctoBuffer:configure()
   self:apply_mappings()
 end
 
+---@class GithubContributor
+---@field login string?
+---@field id integer?
+---@field node_id string?
+---@field avatar_url string?
+---@field gravatar_id string|nil?
+---@field url string?
+---@field html_url string?
+---@field followers_url string?
+---@field following_url string?
+---@field gists_url string?
+---@field starred_url string?
+---@field subscriptions_url string?
+---@field organizations_url string?
+---@field repos_url string?
+---@field events_url string?
+---@field received_events_url string?
+---@field type string
+---@field site_admin boolean?
+---@field contributions integer
+---@field email string?
+---@field name string?
+
 ---Accumulates all the taggable users into a single list that
 --gets set as a buffer variable `taggable_users`. If this list of users
 ---is needed syncronously, this function will need to be refactored.
@@ -270,7 +326,7 @@ function OctoBuffer:async_fetch_taggable_users()
   local users = self.taggable_users or {}
 
   -- add participants
-  for _, p in pairs(self.node.participants) do
+  for _, p in pairs(self.node.participants.nodes) do
     table.insert(users, p.login)
   end
 
@@ -284,6 +340,7 @@ function OctoBuffer:async_fetch_taggable_users()
     args = { "api", string.format("repos/%s/contributors", self.repo) },
     cb = function(response)
       if not utils.is_blank(response) then
+        ---@type GithubContributor[]
         local resp = vim.fn.json_decode(response)
         for _, contributor in ipairs(resp) do
           table.insert(users, contributor.login)
@@ -294,12 +351,29 @@ function OctoBuffer:async_fetch_taggable_users()
   }
 end
 
+---@class GithubIssue
+---@field id integer
+---@field node_id string
+---@field url string
+---@field repository_url string
+---@field labels_url string
+---@field comments_url string
+---@field events_url string
+---@field html_url string
+---@field number integer
+---@field state string
+---@field state_reason "completed"|"reopened"|"not_planned"|nil
+---@field title string
+---@field body string
+
 ---Fetches the issues in the repo so they can be used for completion.
 function OctoBuffer:async_fetch_issues()
   gh.run {
     args = { "api", string.format("repos/%s/issues", self.repo) },
     cb = function(response)
+      ---@type { number: integer, title: string }[]
       local issues_metadata = {}
+      ---@type GithubIssue[]
       local resp = vim.fn.json_decode(response)
       for _, issue in ipairs(resp) do
         table.insert(issues_metadata, { number = issue.number, title = issue.title })
@@ -408,6 +482,7 @@ function OctoBuffer:do_save_title_and_body()
 end
 
 ---Add a new comment to the issue/PR
+---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_issue_comment(comment_metadata)
   -- create new issue comment
   local id = self.node.id
@@ -418,6 +493,7 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
+        ---@type AddIssueCommentMutationResponse
         local resp = vim.fn.json_decode(output)
         local respBody = resp.data.addComment.commentEdge.node.body
         local respId = resp.data.addComment.commentEdge.node.id
@@ -439,6 +515,7 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
 end
 
 ---Replies to a review comment thread
+---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_thread_comment(comment_metadata)
   -- create new thread reply
   local query = graphql(
@@ -453,6 +530,7 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
+        ---@type AddPullRequestReviewCommentMutationResponse
         local resp = vim.fn.json_decode(output)
         local resp_comment = resp.data.addPullRequestReviewComment.comment
         local comment_end
@@ -514,10 +592,14 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
 end
 
 ---Adds a new review comment thread to the current review.
+---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_new_thread(comment_metadata)
   --TODO: How to create a new thread on a line where there is already one
 
   local review = require("octo.reviews").get_current_review()
+  if review == nil then
+    return
+  end
   local layout = review.layout
   local pr = review.pull_request
   local file = layout:cur_file()
@@ -561,6 +643,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
+          -- TODO type
           local resp = vim.fn.json_decode(output).data.addPullRequestReviewThread
           if not utils.is_blank(resp.thread) then
             local new_comment = resp.thread.comments.nodes[1]
@@ -658,6 +741,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
           if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
+            -- TODO type
             local r = vim.fn.json_decode(output)
             local resp = r.data.addPullRequestReviewComment
             if not utils.is_blank(resp.comment) then
@@ -688,7 +772,12 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
   end
 end
 
+---@class GithubReply
+---@field id integer
+---@field body string
+
 ---Replies a review thread w/o creating a new review
+---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_pull_request_comment(comment_metadata)
   local current_review = require("octo.reviews").get_current_review()
   if not utils.is_blank(current_review) then
@@ -711,6 +800,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
       if not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type GithubReply
         local resp = vim.fn.json_decode(output)
         if not utils.is_blank(resp) then
           if utils.trim(comment_metadata.body) == utils.trim(resp.body) then
@@ -735,6 +825,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
 end
 
 ---Update a comment's metadata
+---@param comment_metadata CommentMetadata
 function OctoBuffer:do_update_comment(comment_metadata)
   -- update comment/reply
   local update_query
@@ -751,6 +842,8 @@ function OctoBuffer:do_update_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
+        -- TODO type
+        ---@type UpdateIssueCommentMutationResponse|any|UpdatePullRequestReviewMutationResponse
         local resp = vim.fn.json_decode(output)
         local resp_comment
         if comment_metadata.kind == "IssueComment" then
@@ -787,6 +880,7 @@ function OctoBuffer:update_metadata()
   if not self.ready then
     return
   end
+  ---@type (TitleMetadata|BodyMetadata|CommentMetadata)[]
   local metadata_objs = {}
   if self.kind == "issue" or self.kind == "pull" then
     table.insert(metadata_objs, self.titleMetadata)
@@ -877,26 +971,31 @@ function OctoBuffer:render_signcolumn()
 end
 
 --- Checks if the buffer represents a review comment thread
+---@return boolean
 function OctoBuffer:isReviewThread()
   return self.kind == "reviewthread"
 end
 
 --- Checks if the buffer represents a Pull Request
+---@return boolean
 function OctoBuffer:isPullRequest()
   return self.kind == "pull"
 end
 
 --- Checks if the buffer represents an Issue
+---@return boolean
 function OctoBuffer:isIssue()
   return self.kind == "issue"
 end
 
 ---Checks if the buffer represents a GitHub repo
+---@return boolean
 function OctoBuffer:isRepo()
   return self.kind == "repo"
 end
 
 ---Gets the PR object for the current octo buffer
+---@return PullRequest?
 function OctoBuffer:get_pr()
   if not self:isPullRequest() then
     utils.error "Not in a PR buffer"
@@ -918,12 +1017,15 @@ function OctoBuffer:get_pr()
 end
 
 --- Get a issue/PR comment at cursor (if any)
+---@return CommentMetadata?
 function OctoBuffer:get_comment_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   return self:get_comment_at_line(cursor[1])
 end
 
 --- Get a issue/PR comment at a given line (if any)
+---@param line integer
+---@return CommentMetadata?
 function OctoBuffer:get_comment_at_line(line)
   for _, comment in ipairs(self.commentsMetadata) do
     local mark =
@@ -939,6 +1041,9 @@ function OctoBuffer:get_comment_at_line(line)
 end
 
 ---Gets the issue/PR body at cursor (if any)
+---@return BodyMetadata?
+---@return integer?
+---@return integer?
 function OctoBuffer:get_body_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local metadata = self.bodyMetadata
@@ -952,12 +1057,15 @@ function OctoBuffer:get_body_at_cursor()
 end
 
 ---Gets the review thread at cursor (if any)
+---@return ThreadMetadata?
 function OctoBuffer:get_thread_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   return self:get_thread_at_line(cursor[1])
 end
 
 ---Gets the review thread at a given line (if any)
+---@param line integer
+---@return ThreadMetadata?
 function OctoBuffer:get_thread_at_line(line)
   local thread_marks = vim.api.nvim_buf_get_extmarks(self.bufnr, constants.OCTO_THREAD_NS, 0, -1, { details = true })
   for _, mark in ipairs(thread_marks) do
@@ -975,6 +1083,7 @@ function OctoBuffer:get_thread_at_line(line)
 end
 
 ---Gets the reactions groups at cursor (if any)
+---@return string?
 function OctoBuffer:get_reactions_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local body_reaction_line = self.bodyMetadata.reactionLine
@@ -993,6 +1102,8 @@ function OctoBuffer:get_reactions_at_cursor()
 end
 
 ---Updates the reactions groups at cursor (if any)
+---@param reaction_groups ReactionGroup[]
+---@param reaction_line integer
 function OctoBuffer:update_reactions_at_cursor(reaction_groups, reaction_line)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local reactions_count = 0

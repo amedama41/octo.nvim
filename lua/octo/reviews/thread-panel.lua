@@ -26,6 +26,7 @@ function M.show_review_threads()
 
   local pr = file.pull_request
   local review_level = review:get_level()
+  ---@type PullRequestReviewThread[]
   local threads = vim.tbl_values(review.threads)
   table.sort(threads, function(t1, t2)
     return t1.startLine < t2.startLine
@@ -33,6 +34,7 @@ function M.show_review_threads()
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   -- get threads associated with current line
+  ---@type PullRequestReviewThread[]
   local threads_at_cursor = {}
   local index = 1
   for _, thread in ipairs(threads) do
@@ -123,8 +125,16 @@ function M.hide_review_threads()
   end
 end
 
+---@param index integer
+---@param threads PullRequestReviewThread[]
+---@param repo string
+---@param number integer
+---@param side 'LEFT'|'RIGHT'
+---@param path string
+---@return OctoBuffer
 function M.create_thread_buffer(index, threads, repo, number, side, path)
   local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
   if not vim.startswith(path, "/") then
     path = "/" .. path
   end

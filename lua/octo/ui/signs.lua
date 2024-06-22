@@ -11,6 +11,9 @@ function M.setup()
   vim.cmd [[sign define octo_dirty_line text=[ texthl=OctoDirty linehl=OctoEditable]]
 end
 
+---@param name string
+---@param bufnr integer
+---@param line integer
 function M.place(name, bufnr, line)
   -- 0-index based wrapper
   if not line then
@@ -19,11 +22,16 @@ function M.place(name, bufnr, line)
   pcall(vim.fn.sign_place, 0, "octo_ns", name, bufnr, { lnum = line + 1 })
 end
 
+---@param bufnr integer
 function M.unplace(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   pcall(vim.fn.sign_unplace, "octo_ns", { buffer = bufnr })
 end
 
+---@param bufnr integer
+---@param start_line integer?
+---@param end_line integer?
+---@param is_dirty boolean
 function M.place_signs(bufnr, start_line, end_line, is_dirty)
   if not start_line or not end_line then
     return

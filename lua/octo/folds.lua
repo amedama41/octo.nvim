@@ -2,6 +2,10 @@ local M = {}
 
 function M.setup() end
 
+---@param bufnr integer
+---@param start_line integer
+---@param end_line integer
+---@param is_opened boolean
 function M.create(bufnr, start_line, end_line, is_opened)
   vim.api.nvim_buf_call(bufnr, function()
     vim.cmd [[setlocal foldmethod=manual]]

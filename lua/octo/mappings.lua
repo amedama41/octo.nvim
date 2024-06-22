@@ -227,14 +227,23 @@ return {
   end,
   approve_review = function()
     local current_review = reviews.get_current_review()
+    if current_review == nil then
+      return
+    end
     current_review:submit "APPROVE"
   end,
   comment_review = function()
     local current_review = reviews.get_current_review()
+    if current_review == nil then
+      return
+    end
     current_review:submit "COMMENT"
   end,
   request_changes = function()
     local current_review = reviews.get_current_review()
+    if current_review == nil then
+      return
+    end
     current_review:submit "REQUEST_CHANGES"
   end,
   toggle_viewed = function()

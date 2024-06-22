@@ -8,12 +8,22 @@ local M = {}
 ---@field startLine integer
 ---@field endLine integer
 ---@field viewerCanUpdate boolean
--- @field reactionGroups table[]
--- @field reactionLine integer
+---@field reactionGroups ReactionGroup[]?
+---@field reactionLine integer?
 local BodyMetadata = {}
 BodyMetadata.__index = BodyMetadata
 
+---@class BodyMetadataOpts
+---@field savedBody string
+---@field body string
+---@field dirty boolean
+---@field extmark integer
+---@field viewerCanUpdate boolean
+---@field reactionLine integer?
+---@field reactionGroups ReactionGroup[]?
+
 ---BodyMetadata constructor.
+---@param opts BodyMetadataOpts?
 ---@return BodyMetadata
 function BodyMetadata:new(opts)
   opts = opts or {}

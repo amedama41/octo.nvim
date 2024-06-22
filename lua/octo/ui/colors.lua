@@ -163,6 +163,7 @@ function M.setup()
 end
 
 local HIGHLIGHT_NAME_PREFIX = "octo"
+---@type table<string, string>
 local HIGHLIGHT_CACHE = {}
 local HIGHLIGHT_MODE_NAMES = {
   background = "mb",
@@ -170,10 +171,17 @@ local HIGHLIGHT_MODE_NAMES = {
 }
 
 -- from https://github.com/norcalli/nvim-colorizer.lua
+---@param rgb string
+---@param mode "background"|"foreground"
+---@return string
 local function make_highlight_name(rgb, mode)
   return table.concat({ HIGHLIGHT_NAME_PREFIX, HIGHLIGHT_MODE_NAMES[mode], rgb }, "_")
 end
 
+---@param r integer
+---@param g integer
+---@param b integer
+---@return boolean
 local function color_is_bright(r, g, b)
   -- Counting the perceptive luminance - human eye favors green color
   local luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
@@ -193,6 +201,9 @@ function M.get_background_color_of_highlight_group(highlight_group_name)
   end
 end
 
+---@param rgb_hex string
+---@param options { mode: string? }?
+---@return string
 function M.create_highlight(rgb_hex, options)
   options = options or {}
   local mode = options.mode or "background"

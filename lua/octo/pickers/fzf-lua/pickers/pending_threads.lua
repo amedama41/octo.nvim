@@ -4,6 +4,7 @@ local navigation = require "octo.navigation"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local reviews = require "octo.reviews"
 
+---@param threads PullRequestReviewThread[]
 return function(threads)
   local max_linenr_length = -1
   for _, thread in ipairs(threads) do

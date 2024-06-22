@@ -4,7 +4,20 @@ local utils = require "octo.utils"
 
 local M = {}
 
+---@class IssueEntry
+---@field filename string
+---@field kind "issue"|"pull_request"
+---@field value integer
+---@field ordinal string
+---@field display fun(entry: IssueEntry)
+---@field obj BriefIssue|BriefPullRequest
+---@field repo string
+
+---@param max_number integer
+---@param print_repo boolean?
+---@return fun(obj: BriefIssue|BriefPullRequest?): IssueEntry?
 function M.gen_from_issue(max_number, print_repo)
+  ---@param entry IssueEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -68,6 +81,16 @@ function M.gen_from_issue(max_number, print_repo)
   end
 end
 
+---@class GitCommitEntry
+---@field value string
+---@field parent string
+---@field ordinal string
+---@field msg string
+---@field display fun(entry: GitCommitEntry)
+---@field author string
+---@field date string
+
+---@return fun(entry: GithubPullRequestCommit?): GitCommitEntry?
 function M.gen_from_git_commits()
   local displayer = entry_display.create {
     separator = " ",
@@ -77,6 +100,7 @@ function M.gen_from_git_commits()
     },
   }
 
+  ---@param entry GitCommitEntry
   local make_display = function(entry)
     return displayer {
       { entry.value:sub(1, 7), "TelescopeResultsNumber" },
@@ -101,6 +125,14 @@ function M.gen_from_git_commits()
   end
 end
 
+---@class GitChangedFile
+---@field value string
+---@field ordinal string
+---@field msg string
+---@field display fun(entry: GitChangedFile)
+---@field change GithubDiffEntry
+
+---@return fun(entry: GithubDiffEntry?): GitChangedFile?
 function M.gen_from_git_changed_files()
   local displayer = entry_display.create {
     separator = " ",
@@ -113,6 +145,7 @@ function M.gen_from_git_changed_files()
     },
   }
 
+  ---@param entry GitChangedFile
   local make_display = function(entry)
     return displayer {
       { entry.value:sub(1, 7), "TelescopeResultsNumber" },
@@ -138,7 +171,15 @@ function M.gen_from_git_changed_files()
   end
 end
 
+---@class ReviewThreadEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: ReviewThreadEntry)
+---@field thread PullRequestReviewThread
+
+---@return fun(thread: PullRequestReviewThread?): ReviewThreadEntry?
 function M.gen_from_review_thread(linenr_length)
+  ---@param entry ReviewThreadEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -177,7 +218,15 @@ function M.gen_from_review_thread(linenr_length)
   end
 end
 
+---@class ProjectEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: ProjectEntry)
+---@field project Project
+
+---@return fun(project: Project?): ProjectEntry?
 function M.gen_from_project()
+  ---@param entry ProjectEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -211,7 +260,15 @@ function M.gen_from_project()
   end
 end
 
+---@class ProjectColumnEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: ProjectColumnEntry)
+---@field column ProjectColumn
+
+---@return fun(column: ProjectColumn?): ProjectColumnEntry?
 function M.gen_from_project_column()
+  ---@param entry ProjectColumnEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -244,7 +301,15 @@ function M.gen_from_project_column()
   end
 end
 
+---@class ProjectCardEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: ProjectCardEntry)
+---@field card ProjectCard
+
+---@return fun(card: ProjectCard?): ProjectCardEntry?
 function M.gen_from_project_card()
+  ---@param entry ProjectCardEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -280,7 +345,15 @@ function M.gen_from_project_card()
   end
 end
 
+---@class LabelEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: LabelEntry)
+---@field label LabelWithId
+
+---@return fun(label: LabelWithId?): LabelEntry?
 function M.gen_from_label()
+  ---@param entry LabelEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -314,7 +387,15 @@ function M.gen_from_label()
   end
 end
 
+---@class TeamEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: TeamEntry)
+---@field team { id: string, name: string }
+
+---@return fun(team: { id: string, name: string }?): TeamEntry?
 function M.gen_from_team()
+  ---@param entry TeamEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -348,7 +429,15 @@ function M.gen_from_team()
   end
 end
 
+---@class UserEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: UserEntry)
+---@field user { id: string, login: string, teams: Team[]? }
+
+---@return fun(user: { id: string, login: string, teams: Team[]? }?): UserEntry?
 function M.gen_from_user()
+  ---@param entry UserEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -382,7 +471,20 @@ function M.gen_from_user()
   end
 end
 
+---@class RepoEntry
+---@field filename string
+---@field kind "repo"
+---@field value string
+---@field ordinal string
+---@field display fun(entry: RepoEntry)
+---@field repo RepositoryBase
+
+---@param max_nameWithOwner integer
+---@param max_forkCount integer
+---@param max_stargazerCount integer
+---@return fun(repo: RepositoryBase?): RepoEntry?
 function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
+  ---@param entry RepoEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -446,7 +548,15 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
   end
 end
 
+---@class GistEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: GistEntry)
+---@field gist Gist
+
+---@return fun(gist: Gist?): GistEntry?
 function M.gen_from_gist()
+  ---@param entry GistEntry
   local make_display = function(entry)
     if not entry then
       return
@@ -503,7 +613,15 @@ function M.gen_from_gist()
   end
 end
 
+---@class OctoActionEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: OctoActionEntry)
+---@field action { object: string, name: string, fun: function }
+
+---@return fun(action: { object: string, name: string, fun: function }?): OctoActionEntry?
 function M.gen_from_octo_actions()
+  ---@param entry OctoActionEntry
   local make_display = function(entry)
     if not entry then
       return nil
@@ -539,7 +657,15 @@ function M.gen_from_octo_actions()
   end
 end
 
+---@class IssueTemplateEntry
+---@field value string
+---@field ordinal string
+---@field display fun(entry: IssueTemplateEntry)
+---@field template IssueTemplate
+
+---@return fun(template: IssueTemplate?): IssueTemplateEntry?
 function M.gen_from_issue_templates()
+  ---@param entry IssueTemplateEntry
   local make_display = function(entry)
     if not entry then
       return nil

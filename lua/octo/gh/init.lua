@@ -109,6 +109,9 @@ function M.setup()
   }):start()
 end
 
+---@param opts { mode: "sync"|"async"?, args: string[], hostname: string?, headers: string[]?, stream_cb: fun(data: string, err: string), cb: fun(output: string, stderr: string) }
+---@return string?
+---@return string?
 function M.run(opts)
   if not Job then
     return

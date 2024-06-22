@@ -70,12 +70,15 @@ M.issue = function(formatted_issues)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
+          ---@type PullRequestQueryResponse|IssueQueryResponse
           local result = vim.fn.json_decode(output)
           local obj
           if entry.kind == "issue" then
             obj = result.data.repository.issue
           elseif entry.kind == "pull_request" then
             obj = result.data.repository.pullRequest
+          else
+            assert(false, "never reach at this line")
           end
           writers.write_title(tmpbuf, obj.title, 1)
           writers.write_details(tmpbuf, obj)
@@ -126,12 +129,15 @@ M.search = function()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
+          ---@type PullRequestQueryResponse|IssueQueryResponse
           local result = vim.fn.json_decode(output)
           local obj
           if kind == "issue" then
             obj = result.data.repository.issue
           elseif kind == "pull_request" then
             obj = result.data.repository.pullRequest
+          else
+            assert(false, "never reach at this line")
           end
           writers.write_title(tmpbuf, obj.title, 1)
           writers.write_details(tmpbuf, obj)

@@ -9,6 +9,7 @@ Opens a url in your default browser, bypassing gh.
 
 @param url The url to open.
 ]]
+---@param url string
 function M.open_in_browser_raw(url)
   local os_name = vim.loop.os_uname().sysname
   local is_windows = vim.loop.os_uname().version:match "Windows"
@@ -22,6 +23,9 @@ function M.open_in_browser_raw(url)
   end
 end
 
+---@param kind "issue"|"pull_request"|"repo"|"gist"?
+---@param repo string|RepositoryBase?
+---@param number integer?
 function M.open_in_browser(kind, repo, number)
   local cmd
   local remote = utils.get_remote_host()
@@ -48,6 +52,7 @@ function M.open_in_browser(kind, repo, number)
     elseif kind == "issue" then
       cmd = string.format("gh issue view --web -R %s/%s %d", remote, repo, number)
     elseif kind == "repo" then
+      ---@cast repo RepositoryBase
       cmd = string.format("gh repo view --web %s", repo.url)
     elseif kind == "gist" then
       cmd = string.format("gh gist view --web %s", number)
@@ -102,6 +107,7 @@ function M.go_to_issue()
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
+        ---@type IssueKindQueryResponse
         local resp = vim.fn.json_decode(output)
         local kind = resp.data.repository.issueOrPullRequest.__typename
         if kind == "Issue" then

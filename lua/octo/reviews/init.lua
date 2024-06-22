@@ -11,7 +11,7 @@ local utils = require "octo.utils"
 ---@field repo string
 ---@field number integer
 ---@field id integer
----@field threads table[]
+---@field threads PullRequestReviewThread[]
 ---@field files FileEntry[]
 ---@field layout Layout
 ---@field pull_request PullRequest
@@ -19,6 +19,7 @@ local Review = {}
 Review.__index = Review
 
 ---Review constructor.
+---@param pull_request PullRequest
 ---@return Review
 function Review:new(pull_request)
   local this = {
@@ -32,6 +33,7 @@ function Review:new(pull_request)
 end
 
 -- Creates a new review
+---@param callback fun(resp: StartReviewMutationResponse)
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
   gh.run {
@@ -40,6 +42,7 @@ function Review:create(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type StartReviewMutationResponse
         local resp = vim.fn.json_decode(output)
         callback(resp)
       end
@@ -58,6 +61,7 @@ function Review:start()
 end
 
 -- Retrieves existing review
+---@param callback fun(resp: PendingReviewThreadsQueryResponse)
 function Review:retrieve(callback)
   local query =
     graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
@@ -67,6 +71,7 @@ function Review:retrieve(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type PendingReviewThreadsQueryResponse
         local resp = vim.fn.json_decode(output)
         callback(resp)
       end
@@ -82,8 +87,10 @@ function Review:resume()
       return
     end
 
+    local reviews = resp.data.repository.pullRequest.reviews.nodes
+    assert(reviews ~= nil)
     -- There can only be one pending review for a given user
-    for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
+    for _, review in ipairs(reviews) do
       if review.viewerDidAuthor then
         self.id = review.id
         break
@@ -95,6 +102,7 @@ function Review:resume()
       return
     end
 
+    ---@type PullRequestReviewThread[]
     local threads = resp.data.repository.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
     self:initiate()
@@ -102,6 +110,8 @@ function Review:resume()
 end
 
 -- Updates layout to focus on a single commit
+---@param right string
+---@param left string
 function Review:focus_commit(right, left)
   local pr = self.pull_request
   self.layout:close()
@@ -111,6 +121,7 @@ function Review:focus_commit(right, left)
     files = {},
   }
   self.layout:open(self)
+  ---@param files FileEntry[]
   local cb = function(files)
     -- pre-fetch the first file
     if #files > 0 then
@@ -127,6 +138,7 @@ function Review:focus_commit(right, left)
 end
 
 ---Initiates (starts/resumes) a review
+---@param opts { left: Rev, right: Rev }?
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
@@ -166,6 +178,7 @@ function Review:discard()
       if stderr and not utils.is_blank(stderr) then
         vim.error(stderr)
       elseif output then
+        ---@type PendingReviewThreadsQueryResponse
         local resp = vim.fn.json_decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
           utils.error "No pending reviews found"
@@ -196,6 +209,7 @@ function Review:discard()
   }
 end
 
+---@param threads PullRequestReviewThread[]
 function Review:update_threads(threads)
   self.threads = {}
   for _, thread in ipairs(threads) do
@@ -260,7 +274,9 @@ function Review:submit(event)
 end
 
 function Review:show_pending_comments()
+  ---@type PullRequestReviewThread[]
   local pending_threads = {}
+  ---@type PullRequestReviewThread[]
   local threads = vim.tbl_values(self.threads)
   table.sort(threads, function(t1, t2)
     return t1.startLine < t2.startLine
@@ -280,6 +296,7 @@ function Review:show_pending_comments()
   end
 end
 
+---@param isSuggestion boolean
 function Review:add_comment(isSuggestion)
   -- check if we are on the diff layout and return early if not
   local bufnr = vim.api.nvim_get_current_buf()
@@ -432,6 +449,7 @@ function Review:add_comment(isSuggestion)
   end
 end
 
+---@return "COMMIT"|"PR"
 function Review:get_level()
   local review_level = "COMMIT"
   if
@@ -449,13 +467,21 @@ M.reviews = {}
 
 M.Review = Review
 
+---@param isSuggestion boolean
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
+  if review == nil then
+    return
+  end
   review:add_comment(isSuggestion)
 end
 
+---@param thread PullRequestReviewThread
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
+  if current_review == nil then
+    return
+  end
   for _, file in ipairs(current_review.layout.files) do
     if thread.path == file.path then
       current_review.layout:ensure_layout()
@@ -477,11 +503,13 @@ function M.jump_to_pending_review_thread(thread)
   end
 end
 
+---@return Review?
 function M.get_current_review()
   local current_tabpage = vim.api.nvim_get_current_tabpage()
   return M.reviews[tostring(current_tabpage)]
 end
 
+---@return Layout?
 function M.get_current_layout()
   local current_review = M.get_current_review()
   if current_review then

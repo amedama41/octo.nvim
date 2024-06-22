@@ -54,6 +54,8 @@ function M.gen_from_git_changed_files(entry)
   }
 end
 
+---@param linenr_length integer
+---@param thread PullRequestReviewThread
 function M.gen_from_review_thread(linenr_length, thread)
   if not thread or vim.tbl_isempty(thread) then
     return nil
@@ -101,6 +103,7 @@ function M.gen_from_project_card(card)
   }
 end
 
+---@param project ProjectV2
 function M.gen_from_project_v2(project)
   if not project or vim.tbl_isempty(project) then
     return nil
