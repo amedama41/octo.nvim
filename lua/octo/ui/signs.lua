@@ -4,16 +4,6 @@ local vim = vim
 local M = {}
 
 function M.setup()
-  local conf = config.values
-
-  vim.cmd(string.format("sign define octo_thread text=%s texthl=OctoBlue", conf.comment_icon))
-  vim.cmd(string.format("sign define octo_thread_resolved text=%s  texthl=OctoGreen", conf.comment_icon))
-  vim.cmd(string.format("sign define octo_thread_outdated text=%s  texthl=OctoRed", conf.comment_icon))
-  vim.cmd(string.format("sign define octo_thread_pending text=%s texthl=OctoYellow", conf.comment_icon))
-  vim.cmd(string.format("sign define octo_thread_resolved_pending text=%s texthl=OctoYellow", conf.comment_icon))
-  vim.cmd(string.format("sign define octo_thread_outdated_pending text=%s texthl=OctoYellow", conf.comment_icon))
-
-  vim.cmd [[sign define octo_comment_range numhl=OctoGreen]]
   vim.cmd [[sign define octo_clean_block_start text=┌ linehl=OctoEditable]]
   vim.cmd [[sign define octo_clean_block_end text=└ linehl=OctoEditable]]
   vim.cmd [[sign define octo_dirty_block_start text=┌ texthl=OctoDirty linehl=OctoEditable]]
@@ -24,6 +14,9 @@ function M.setup()
   vim.cmd [[sign define octo_dirty_line text=[ texthl=OctoDirty linehl=OctoEditable]]
 end
 
+---@param name string
+---@param bufnr integer
+---@param line integer
 function M.place(name, bufnr, line)
   -- 0-index based wrapper
   if not line then
@@ -37,6 +30,7 @@ function M.place(name, bufnr, line)
   -- TODO: implement status column support for thread signs
 end
 
+---@param bufnr integer
 function M.unplace(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   -- sign column
@@ -49,6 +43,10 @@ function M.unplace(bufnr)
   end
 end
 
+---@param bufnr integer
+---@param start_line integer?
+---@param end_line integer?
+---@param is_dirty boolean
 function M.place_signs(bufnr, start_line, end_line, is_dirty)
   if not start_line or not end_line then
     return

@@ -27,8 +27,10 @@ return function(cb)
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
         if output then
+          ---@type ProjectsQueryV2Response
           local resp = vim.fn.json_decode(output)
 
+          ---@type ProjectV2[]
           local unsorted_projects = {}
           local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
           local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
@@ -37,6 +39,7 @@ return function(cb)
           vim.list_extend(unsorted_projects, user_projects)
           vim.list_extend(unsorted_projects, org_projects)
 
+          ---@type ProjectV2[]
           local projects = {}
           for _, project in ipairs(unsorted_projects) do
             if project.closed then

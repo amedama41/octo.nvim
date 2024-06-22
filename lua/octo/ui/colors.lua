@@ -95,6 +95,7 @@ local function get_hl_links()
     Float = "NormalFloat",
     TimelineItemHeading = "Comment",
     TimelineMarker = "Identifier",
+    TimelineSeparator = "Comment",
     Symbol = "Comment",
     Date = "Comment",
     DetailsLabel = "Title",
@@ -111,6 +112,9 @@ local function get_hl_links()
     DiffstatAdditions = "OctoGreen ",
     DiffstatDeletions = "OctoRed ",
     DiffstatNeutral = "OctoGrey",
+    ThreadPanelFloat = "NormalFloat",
+    ThreadPanelFloatBoarder = "FloatBorder",
+    ThreadPanelSignColumn = "SignColumn",
 
     StateOpen = "OctoGreen",
     StateClosed = "OctoRed",
@@ -151,9 +155,16 @@ function M.setup()
   for from, to in pairs(get_hl_links()) do
     vim.cmd("hi def link Octo" .. from .. " " .. to)
   end
+
+  for _, type in pairs({ "Review", "Thread", "ThreadComment", "Comment", "Event" }) do
+    for _, group in pairs({ "TimelineItemHeading", "TimelineMarker", "TimelineSeparator" }) do
+      vim.cmd("hi def link Octo" .. group .. "." .. type .. " Octo" .. group)
+    end
+  end
 end
 
 local HIGHLIGHT_NAME_PREFIX = "octo"
+---@type table<string, string>
 local HIGHLIGHT_CACHE = {}
 local HIGHLIGHT_MODE_NAMES = {
   background = "mb",
@@ -161,10 +172,17 @@ local HIGHLIGHT_MODE_NAMES = {
 }
 
 -- from https://github.com/norcalli/nvim-colorizer.lua
+---@param rgb string
+---@param mode "background"|"foreground"
+---@return string
 local function make_highlight_name(rgb, mode)
   return table.concat({ HIGHLIGHT_NAME_PREFIX, HIGHLIGHT_MODE_NAMES[mode], rgb }, "_")
 end
 
+---@param r integer
+---@param g integer
+---@param b integer
+---@return boolean
 local function color_is_bright(r, g, b)
   -- Counting the perceptive luminance - human eye favors green color
   local luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
@@ -184,6 +202,9 @@ function M.get_background_color_of_highlight_group(highlight_group_name)
   end
 end
 
+---@param rgb_hex string
+---@param options { mode: string? }?
+---@return string
 function M.create_highlight(rgb_hex, options)
   options = options or {}
   local mode = options.mode or "background"

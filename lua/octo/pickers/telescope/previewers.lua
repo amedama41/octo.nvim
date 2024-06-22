@@ -8,12 +8,15 @@ local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
 
+---@param opts { preview_title: string }
 local issue = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry IssueEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry IssueEntry
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
@@ -31,12 +34,15 @@ local issue = defaulter(function(opts)
             if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+              ---@type PullRequestQueryResponse|IssueQueryResponse
               local result = vim.fn.json_decode(output)
               local obj
               if entry.kind == "issue" then
                 obj = result.data.repository.issue
               elseif entry.kind == "pull_request" then
                 obj = result.data.repository.pullRequest
+              else
+                assert(false, "never reach at this line")
               end
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
@@ -45,7 +51,7 @@ local issue = defaulter(function(opts)
               local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
               writers.write_block(bufnr, { "", "" }, reactions_line)
               writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-              vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+              vim.api.nvim_set_option_value("filetype", "octo", { buf = bufnr })
             end
           end,
         }
@@ -54,12 +60,15 @@ local issue = defaulter(function(opts)
   }
 end)
 
+---@param opts { preview_title: string }
 local gist = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry GistEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry GistEntry
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
@@ -67,23 +76,26 @@ local gist = defaulter(function(opts)
         if file.text then
           vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(file.text, "\n"))
         else
-          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, entry.gist.description)
+          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { entry.gist.description })
         end
         vim.api.nvim_buf_call(bufnr, function()
-          pcall(vim.cmd, "set filetype=" .. string.gsub(file.extension, "\\.", ""))
+          pcall(vim.cmd --[[@as function]], "set filetype=" .. string.gsub(file.extension, "\\.", ""))
         end)
       end
     end,
   }
 end)
 
+---@param opts { preview_title: string, repo: string }
 local commit = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
     keep_last_buf = true,
+    ---@param entry GitCommitEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry GitCommitEntry
     define_preview = function(self, entry)
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
         local lines = {}
@@ -102,7 +114,7 @@ local commit = defaulter(function(opts)
           bufname = self.state.bufname,
           mode = "append",
           callback = function(bufnr, _)
-            vim.api.nvim_buf_set_option(bufnr, "filetype", "diff")
+            vim.api.nvim_set_option_value("filetype", "diff", { buf = bufnr })
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
@@ -113,31 +125,37 @@ local commit = defaulter(function(opts)
   }
 end, {})
 
+---@param opts { preview_title: string }
 local changed_files = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
     keep_last_buf = true,
+    ---@param entry GitChangedFile
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry GitChangedFile
     define_preview = function(self, entry)
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
         local diff = entry.change.patch
         if diff then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          vim.api.nvim_set_option_value("filetype", "diff", { buf = self.state.bufnr })
         end
       end
     end,
   }
 end, {})
 
+---@param opts { preview_title: string }
 local review_thread = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry ReviewThreadEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry ReviewThreadEntry
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
@@ -155,18 +173,21 @@ local review_thread = defaulter(function(opts)
   }
 end, {})
 
+---@param opts { preview_title: string }
 local issue_template = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    ---@param entry IssueTemplateEntry
     get_buffer_by_name = function(_, entry)
       return entry.value
     end,
+    ---@param entry IssueTemplateEntry
     define_preview = function(self, entry)
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
         local template = entry.template.body
         if template then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(template, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "markdown")
+          vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
         end
       end
     end,

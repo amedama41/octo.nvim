@@ -7,10 +7,21 @@ local M = {}
 ---@field reviewId string
 ---@field path string
 ---@field line number
+---@field bufferStartLine integer?
+---@field bufferEndLine integer?
 local ThreadMetadata = {}
 ThreadMetadata.__index = ThreadMetadata
 
+---@class ThreadMetadataOpts
+---@field threadId string
+---@field replyTo string
+---@field replyToRest string
+---@field reviewId string
+---@field path string
+---@field line integer
+
 ---ThreadMetadata constructor.
+---@param opts ThreadMetadataOpts
 ---@return ThreadMetadata
 function ThreadMetadata:new(opts)
   local this = {

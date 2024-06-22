@@ -8,8 +8,11 @@ local vim = vim
 
 local M = {}
 
+---@type table<string, string>
 local repo_id_cache = {}
+---@type table<string, { issueTemplates: IssueTemplate[], pullRequestTemplates: PullRequestTemplate[] }>
 local repo_templates_cache = {}
+---@type table<string, Repository>
 local repo_info_cache = {}
 local path_sep = package.config:sub(1, 1)
 
@@ -71,16 +74,21 @@ M.file_status_map = {
   renamed = "R",
 }
 
+---@param str string
+---@return string
 function M.trim(str)
   if type(vim.fn.trim) == "function" then
     return vim.fn.trim(str)
   elseif type(vim.trim) == "function" then
     return vim.trim(str)
   else
-    return str:gsub("^%s*(.-)%s*$", "%1")
+    local result = str:gsub("^%s*(.-)%s*$", "%1")
+    return result
   end
 end
 
+---@param states string[]
+---@return string?
 function M.calculate_strongest_review_state(states)
   if vim.tbl_contains(states, "APPROVED") then
     return "APPROVED"
@@ -106,6 +114,12 @@ M.reaction_map = {
   ["EYES"] = "👀 ",
 }
 
+---@generic T
+---@param tbl T[]
+---@param first integer
+---@param last integer
+---@param step integer?
+---@return T[]
 function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
@@ -139,6 +153,9 @@ function M.is_blank(s)
   )
 end
 
+---@param url string
+---@param aliases table<string, string>
+---@return { host: string, repo: string }?
 function M.parse_remote_url(url, aliases)
   -- remove trailing ".git"
   url = string.gsub(url, ".git$", "")
@@ -169,6 +186,7 @@ function M.parse_remote_url(url, aliases)
   end
 end
 
+---@return table<string, { host: string, repo: string }>
 function M.parse_git_remote()
   local conf = config.values
   local aliases = conf.ssh_aliases
@@ -180,6 +198,7 @@ function M.parse_git_remote()
   end
   local remotes = {}
   for _, line in ipairs(job:result()) do
+    ---@type string, string
     local name, url = line:match "^(%S+)%s+(%S+)"
     if name then
       local remote = M.parse_remote_url(url, aliases)
@@ -191,6 +210,7 @@ function M.parse_git_remote()
   return remotes
 end
 
+---@return { host: string, repo: string? }
 function M.get_remote()
   local conf = config.values
   local remotes = M.parse_git_remote()
@@ -206,10 +226,12 @@ function M.get_remote()
   }
 end
 
+---@return { host: string, repo: string }[]
 function M.get_all_remotes()
   return vim.tbl_values(M.parse_git_remote())
 end
 
+---@return string?
 function M.get_remote_name()
   return M.get_remote().repo
 end
@@ -274,11 +296,13 @@ function M.in_pr_repo()
   end
 end
 
+---@param bufnr number?
+---@return boolean
 function M.in_pr_branch(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
-    return
+    return false
   end
   if not buffer:isPullRequest() then
     --M.error("Not in Octo PR buffer")
@@ -354,6 +378,8 @@ function M.merge_pr(pr_number)
 end
 
 ---Formats a string as a date
+---@param date_string string
+---@return string
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   local d = date(date_string):addminutes(time_bias)
@@ -377,6 +403,7 @@ function M.format_date(date_string)
 end
 
 ---Gets repo internal GitHub ID
+---@param repo string
 function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
@@ -387,6 +414,7 @@ function M.get_repo_id(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
+    ---@type RepositoryIdQueryResponse
     local resp = vim.fn.json_decode(output)
     local id = resp.data.repository.id
     repo_id_cache[repo] = id
@@ -403,6 +431,8 @@ function M.cwd_is_git()
 end
 
 ---Gets repo info
+---@param repo string
+---@return Repository
 function M.get_repo_info(repo)
   if repo_info_cache[repo] then
     return repo_info_cache[repo]
@@ -413,6 +443,7 @@ function M.get_repo_info(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
+    ---@type RepositoryQueryResponse
     local resp = vim.fn.json_decode(output)
     local info = resp.data.repository
     repo_info_cache[repo] = info
@@ -421,6 +452,8 @@ function M.get_repo_info(repo)
 end
 
 ---Gets repo's templates
+---@param repo string
+---@return { issueTemplates: IssueTemplate[], pullRequestTemplates: PullRequestTemplate[] }
 function M.get_repo_templates(repo)
   if repo_templates_cache[repo] then
     return repo_templates_cache[repo]
@@ -431,6 +464,7 @@ function M.get_repo_templates(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
+    ---@type RepositoryTemplatesQueryResponse
     local resp = vim.fn.json_decode(output)
     local templates = resp.data.repository
 
@@ -448,6 +482,8 @@ function M.get_repo_templates(repo)
 end
 
 ---Helper method to aggregate an API paginated response
+---@param text string
+---@return any[]
 function M.get_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -459,6 +495,8 @@ function M.get_pages(text)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param text string
+---@return any[]
 function M.get_flatten_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -472,6 +510,9 @@ function M.get_flatten_pages(text)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param text string
+---@param aggregation_key string
+---@return table
 function M.aggregate_pages(text, aggregation_key)
   -- aggregation key can be at any level (eg: comments)
   -- take the first response and extend it with elements from the
@@ -489,6 +530,8 @@ function M.aggregate_pages(text, aggregation_key)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param obj table
+---@param prop string
 function M.get_nested_prop(obj, prop)
   while true do
     local parts = vim.split(prop, "%.")
@@ -504,6 +547,9 @@ function M.get_nested_prop(obj, prop)
 end
 
 --- Escapes a characters on a string to be used as a JSON string
+---@param string string
+---@return string
+---@return integer
 function M.escape_char(string)
   return string.gsub(string, '["\\]', {
     ['"'] = '\\"',
@@ -512,6 +558,9 @@ function M.escape_char(string)
 end
 
 --- Extracts repo and number from Octo command varargs
+---@param ... string?
+---@return string?
+---@return integer?
 function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
@@ -542,23 +591,31 @@ function M.get_repo_number_from_varargs(...)
 end
 
 --- Get the URI for a repository
+---@param _ string?
+---@param repo string
+---@return string
 function M.get_repo_uri(_, repo)
   return string.format("octo://%s/repo", repo)
 end
 
 --- Get the URI for an issue
+---@param ... string?
+---@return string
 function M.get_issue_uri(...)
   local repo, number = M.get_repo_number_from_varargs(...)
   return string.format("octo://%s/issue/%s", repo, number)
 end
 
 --- Get the URI for an pull request
+---@return string
 function M.get_pull_request_uri(...)
   local repo, number = M.get_repo_number_from_varargs(...)
   return string.format("octo://%s/pull/%s", repo, number)
 end
 
 ---Helper method opening octo buffers
+---@param kind "issue"|"pull_request"|"repo"
+---@param ... any
 function M.get(kind, ...)
   if kind == "issue" then
     M.get_issue(...)
@@ -569,18 +626,26 @@ function M.get(kind, ...)
   end
 end
 
+---@param _ string?
+---@param repo string
 function M.get_repo(_, repo)
   vim.cmd("edit " .. M.get_repo_uri(_, repo))
 end
 
+---@param ... string
 function M.get_issue(...)
   vim.cmd("edit " .. M.get_issue_uri(...))
 end
 
+---@param ... string
 function M.get_pull_request(...)
   vim.cmd("edit " .. M.get_pull_request_uri(...))
 end
 
+---@param url string
+---@return string?
+---@return string?
+---@return "issue"|"pull"?
 function M.parse_url(url)
   local repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
   if repo and number and kind == "issues" then
@@ -594,7 +659,7 @@ end
 ---@param repo string
 ---@param commit string
 ---@param path string
----@param cb function
+---@param cb fun(lines: string[])
 function M.get_file_contents(repo, commit, path, cb)
   local owner, name = M.split_repo(repo)
   local query = graphql("file_content_query", owner, name, commit, path)
@@ -604,6 +669,7 @@ function M.get_file_contents(repo, commit, path, cb)
       if stderr and not M.is_blank(stderr) then
         M.error(stderr)
       elseif output then
+        ---@type FileContentQueryResponse
         local resp = vim.fn.json_decode(output)
         local blob = resp.data.repository.object
         local lines = {}
@@ -617,13 +683,15 @@ function M.get_file_contents(repo, commit, path, cb)
 end
 
 function M.set_timeout(delay, callback, ...)
-  local timer = vim.loop.new_timer()
-  local args = { ... }
-  vim.loop.timer_start(timer, delay, 0, function()
-    vim.loop.timer_stop(timer)
-    vim.loop.close(timer)
-    callback(unpack(args))
-  end)
+  local timer = vim.uv.new_timer()
+  if timer then
+    local args = { ... }
+    vim.uv.timer_start(timer, delay, 0, function()
+      vim.uv.timer_stop(timer)
+      vim.uv.close(timer)
+      callback(unpack(args))
+    end)
+  end
   return timer
 end
 
@@ -638,6 +706,9 @@ function M.getwin4buf(bufnr)
   return -1
 end
 
+---@param start_col integer
+---@param end_col integer
+---@return boolean
 function M.cursor_in_col_range(start_col, end_col)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local col = cursor[2] + 1
@@ -649,12 +720,19 @@ function M.cursor_in_col_range(start_col, end_col)
   return false
 end
 
+---@param repo string
+---@return string
+---@return string
 function M.split_repo(repo)
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   return owner, name
 end
 
+---@param pattern string
+---@param line string?
+---@param offset integer?
+---@return ...string?
 function M.extract_pattern_at_cursor(pattern, line, offset)
   line = line or vim.api.nvim_get_current_line()
   offset = offset or 0
@@ -675,6 +753,9 @@ function M.extract_pattern_at_cursor(pattern, line, offset)
   return M.extract_pattern_at_cursor(pattern, line:sub(end_col + 1), offset + end_col)
 end
 
+---@param current_repo string?
+---@return string?
+---@return string?
 function M.extract_issue_at_cursor(current_repo)
   local repo, number = M.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
   if not repo or not number then
@@ -695,8 +776,12 @@ function M.extract_issue_at_cursor(current_repo)
   return repo, number
 end
 
+---@param str string
+---@param pattern string
+---@return string[]
 function M.pattern_split(str, pattern)
   -- https://gist.github.com/boredom101/0074f1af6bd5cd6c7848ac6af3e88e85
+  ---@type string[]
   local words = {}
   for word in str:gmatch(pattern) do
     words[#words + 1] = word
@@ -704,13 +789,17 @@ function M.pattern_split(str, pattern)
   return words
 end
 
+---@param text string
+---@param width integer
 function M.text_wrap(text, width)
   -- https://gist.github.com/boredom101/0074f1af6bd5cd6c7848ac6af3e88e85
 
   width = width or math.floor((vim.fn.winwidth(0) * 3) / 4)
   local lines = M.pattern_split(text, "[^\r\n]+")
   local widthLeft
+  ---@type string[]
   local result = {}
+  ---@type string[]
   local line = {}
 
   -- Insert each source line into the result, one-by-one
@@ -760,6 +849,8 @@ function M.text_wrap(text, width)
   return result
 end
 
+---@param reaction_groups ReactionGroup[]
+---@return integer
 function M.count_reactions(reaction_groups)
   local reactions_count = 0
   for _, group in ipairs(reaction_groups) do
@@ -770,7 +861,10 @@ function M.count_reactions(reaction_groups)
   return reactions_count
 end
 
+---@param bufnr integer
+---@return integer[]
 function M.get_sorted_comment_lines(bufnr)
+  ---@type integer[]
   local lines = {}
   local marks = vim.api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, { details = true })
   for _, mark in ipairs(marks) do
@@ -780,6 +874,9 @@ function M.get_sorted_comment_lines(bufnr)
   return lines
 end
 
+---@param thread PullRequestReviewThread
+---@param bufnr integer
+---@return boolean
 function M.is_thread_placed_in_buffer(thread, bufnr)
   local split, path = M.get_split_and_path(bufnr)
   if split == thread.diffSide and path == thread.path then
@@ -788,6 +885,9 @@ function M.is_thread_placed_in_buffer(thread, bufnr)
   return false
 end
 
+---@param bufnr integer
+---@return "LEFT"|"RIGHT"?
+---@return string?
 function M.get_split_and_path(bufnr)
   local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
   if ok and props then
@@ -795,6 +895,7 @@ function M.get_split_and_path(bufnr)
   end
 end
 
+---@param bufnr integer?
 function M.in_diff_window(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
@@ -805,16 +906,19 @@ function M.in_diff_window(bufnr)
 end
 
 -- clear buffer undo history
-function M.clear_history()
-  if true then
-    return
-  end
-  local old_undolevels = vim.o.undolevels
-  vim.o.undolevels = -1
-  vim.cmd [[exe "normal a \<BS>"]]
-  vim.o.undolevels = old_undolevels
+---@param bufnr integer
+function M.clear_history(bufnr)
+  local old_undolevels = vim.bo[bufnr].undolevels
+  vim.bo[bufnr].undolevels = -1
+  vim.api.nvim_buf_set_lines(bufnr, -1, -1, true, { " " })
+  vim.api.nvim_buf_set_lines(bufnr, -2, -1, true, {})
+  vim.bo[bufnr].undolevels = old_undolevels
 end
 
+---@param value integer
+---@param min integer
+---@param max integer
+---@return integer
 function M.clamp(value, min, max)
   if value < min then
     return min
@@ -825,6 +929,8 @@ function M.clamp(value, min, max)
   return value
 end
 
+---@param t any[]
+---@return table<any, integer>
 function M.enum(t)
   for i, v in ipairs(t) do
     t[v] = i
@@ -832,6 +938,8 @@ function M.enum(t)
   return t
 end
 
+---@param name string
+---@return integer|nil
 function M.find_named_buffer(name)
   for _, v in ipairs(vim.api.nvim_list_bufs()) do
     if vim.fn.bufname(v) == name then
@@ -841,6 +949,7 @@ function M.find_named_buffer(name)
   return nil
 end
 
+---@param name string
 function M.wipe_named_buffer(name)
   local bn = M.find_named_buffer(name)
   if bn then
@@ -858,6 +967,9 @@ function M.wipe_named_buffer(name)
   end
 end
 
+---@param s string
+---@param new_length integer
+---@return string
 function M.str_shorten(s, new_length)
   if string.len(s) > new_length - 1 then
     return "…" .. s:sub(string.len(s) - new_length + 1, string.len(s))
@@ -874,10 +986,15 @@ function M.path_relative(path, relative_to)
   return p
 end
 
+---@param path string
+---@return string
+---@return integer
 function M.path_to_matching_str(path)
   return path:gsub("(%-)", "(%%-)"):gsub("(%.)", "(%%.)"):gsub("(%_)", "(%%_)")
 end
 
+---@param path string
+---@return string
 function M.path_add_trailing(path)
   if path:sub(-1) == path_sep then
     return path
@@ -904,6 +1021,8 @@ function M.path_parent(path, remove_trailing)
   return path
 end
 
+---@param path string
+---@return string
 function M.path_remove_trailing(path)
   local p, _ = path:gsub(path_sep .. "$", "")
   return p
@@ -921,19 +1040,27 @@ function M.path_basename(path)
   return path:sub(i + 1, #path)
 end
 
+---@param path string
+---@return string
 function M.path_extension(path)
   path = M.path_basename(path)
   return path:match ".*%.(.*)"
 end
 
+---@param paths string[]
+---@return string
 function M.path_join(paths)
   return table.concat(paths, path_sep)
 end
 
 --- Extract diffhunks from a diff file
+---@param diff string
+---@return table<string, string>
 function M.extract_diffhunks_from_diff(diff)
   local lines = vim.split(diff, "\n")
+  ---@type table<string, string>
   local diffhunks = {}
+  ---@type string[]
   local current_diffhunk = {}
   local current_path
   local state
@@ -962,6 +1089,10 @@ function M.extract_diffhunks_from_diff(diff)
 end
 
 --- Calculate valid comment ranges
+---@param patch string?
+---@return string[]?
+---@return { [1]: integer, [2]: integer }[]?
+---@return { [1]: integer, [2]: integer }[]?
 function M.process_patch(patch)
   -- @@ -from,no-of-lines in the file before  +from,no-of-lines in the file after @@
   -- The no-of-lines values may not be immediately obvious.
@@ -973,8 +1104,11 @@ function M.process_patch(patch)
   if not patch then
     return
   end
+  ---@type string[]
   local hunks = {}
+  ---@type { [1]: integer, [2]: integer }[]
   local left_ranges = {}
+  ---@type { [1]: integer, [2]: integer }[]
   local right_ranges = {}
   local hunk_strings = vim.split(patch:gsub("^@@", ""), "\n@@")
   for _, hunk in ipairs(hunk_strings) do
@@ -999,6 +1133,8 @@ function M.process_patch(patch)
 end
 
 -- calculate GutHub diffstat histogram bar
+---@param stats { additions: integer, deletions: integer }
+---@return { total: integer, additions: integer, deletions: integer, neutral: integer }
 function M.diffstat(stats)
   -- round up to closest multiple of 5
   local total = stats.additions + stats.deletions
@@ -1028,6 +1164,11 @@ function M.diffstat(stats)
   }
 end
 
+---@param bufnr integer
+---@param mark vim.api.keyset.get_extmark_item
+---@return integer?
+---@return integer?
+---@return string?
 function M.get_extmark_region(bufnr, mark)
   -- extmarks are placed on
   -- start line - 1 (except for line 0)
@@ -1070,14 +1211,17 @@ function M.notify(msg, level)
   vim.notify(msg, level, { title = "Octo.nvim" })
 end
 
+---@param msg string
 function M.info(msg)
   vim.notify(msg, vim.log.levels.INFO, { title = "Octo.nvim" })
 end
 
+---@param msg string
 function M.error(msg)
   vim.notify(msg, vim.log.levels.ERROR, { title = "Octo.nvim" })
 end
 
+---@param cb fun(pull_request: PullRequest)
 function M.get_pull_request_for_current_branch(cb)
   gh.run {
     args = { "pr", "view", "--json", "id,number,headRepositoryOwner,headRepository,isCrossRepository,url" },
@@ -1117,6 +1261,7 @@ function M.get_pull_request_for_current_branch(cb)
             if stderr and not M.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
+              ---@type PullRequestQueryResponse
               local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
               local obj = resp.data.repository.pullRequest
               local Rev = require("octo.reviews.rev").Rev
@@ -1138,6 +1283,8 @@ function M.get_pull_request_for_current_branch(cb)
   }
 end
 
+---@param winnr integer
+---@param bufnrs integer[]?
 local function close_preview_window(winnr, bufnrs)
   vim.schedule(function()
     -- exit if we are in one of ignored buffers
@@ -1153,10 +1300,10 @@ end
 
 --- Creates autocommands to close a preview window when events happen.
 ---
----@param events table list of events
----@param winnr number window id of preview window
----@param bufnrs table list of buffers where the preview window will remain visible
----@see |autocmd-events|
+---@param events string[] list of events
+---@param winnr integer window id of preview window
+---@param bufnrs integer[] list of buffers where the preview window will remain visible
+---@see see |autocmd-events|
 function M.close_preview_autocmd(events, winnr, bufnrs)
   local augroup = vim.api.nvim_create_augroup("preview_window_" .. winnr, {
     clear = true,
@@ -1181,6 +1328,8 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
   end
 end
 
+---@param login string
+---@return string?
 function M.get_user_id(login)
   local query = graphql("user_query", login)
   local output = gh.run {
@@ -1188,6 +1337,7 @@ function M.get_user_id(login)
     mode = "sync",
   }
   if output then
+    ---@type UserQueryResponse
     local resp = vim.fn.json_decode(output)
     if resp.data.user and resp.data.user ~= vim.NIL then
       return resp.data.user.id
@@ -1195,6 +1345,8 @@ function M.get_user_id(login)
   end
 end
 
+---@param label string
+---@return string?
 function M.get_label_id(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1210,6 +1362,7 @@ function M.get_label_id(label)
     mode = "sync",
   }
   if output then
+    ---@type RepoLablesQueryResponse
     local resp = vim.fn.json_decode(output)
     if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
       for _, l in ipairs(resp.data.repository.labels.nodes) do
@@ -1222,11 +1375,16 @@ function M.get_label_id(label)
 end
 
 --- Generate maps from diffhunk line to code line:
+---@param diffhunk string
+---@return { left_side_lines: integer[], right_side_lines: integer[], left_offset: integer, right_offset: integer }
 function M.generate_position2line_map(diffhunk)
   local diffhunk_lines = vim.split(diffhunk, "\n")
   local diff_directive = diffhunk_lines[1]
+  ---@type integer|nil, integer|nil
   local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
+  ---@type integer[]
   local right_side_lines = {}
+  ---@type integer[]
   local left_side_lines = {}
   local right_side_line = right_offset
   local left_side_line = left_offset
@@ -1260,8 +1418,11 @@ function M.generate_position2line_map(diffhunk)
 end
 
 --- Generates map from buffer line to diffhunk position
+---@param diffhunk string
+---@return { left_side_lines: table<string, integer>, right_side_lines: table<string, integer>, right_offset: integer, left_offset: integer }
 function M.generate_line2position_map(diffhunk)
   local map = M.generate_position2line_map(diffhunk)
+  ---@type table<string, integer>, table<string, integer>
   local left_side_lines, right_side_lines = {}, {}
   for k, v in pairs(map.left_side_lines) do
     left_side_lines[tostring(v)] = k
@@ -1278,6 +1439,8 @@ function M.generate_line2position_map(diffhunk)
 end
 
 --- Extract REST Id from comment
+---@param comment_url string
+---@return string?
 function M.extract_rest_id(comment_url)
   if M.is_blank(comment_url) then
     return
@@ -1291,6 +1454,8 @@ function M.extract_rest_id(comment_url)
 end
 
 --- Apply mappings to a buffer
+---@param kind OctoMappingsWindow
+---@param bufnr integer
 function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
   local conf = config.values
@@ -1315,6 +1480,9 @@ function M.apply_mappings(kind, bufnr)
 end
 
 -- Returns the starting and ending lines to be commented based on the calling context.
+---@param calling_context "line"|"visual"|"motion"
+---@return integer
+---@return integer
 function M.get_lines_from_context(calling_context)
   local line_number_start = nil
   local line_number_end = nil
@@ -1327,6 +1495,10 @@ function M.get_lines_from_context(calling_context)
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
+  else
+    assert(false)
+    line_number_start = 0
+    line_number_end = 0
   end
   return line_number_start, line_number_end
 end

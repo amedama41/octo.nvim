@@ -22,6 +22,7 @@ local win_reset_opts = {
 ---@field file_panel FilePanel
 ---@field left_winid integer
 ---@field right_winid integer
+---@field thread_winid integer
 ---@field files FileEntry[]
 ---@field file_idx integer
 ---@field ready boolean
@@ -34,6 +35,7 @@ function Layout:new(opt)
   local this = {
     left = opt.left,
     right = opt.right,
+    thread_winid = -1,
     files = opt.files,
     file_idx = 1,
     ready = false,
@@ -43,6 +45,7 @@ function Layout:new(opt)
   return this
 end
 
+---@param review Review
 function Layout:open(review)
   vim.cmd "tab split"
   self.tabpage = vim.api.nvim_get_current_tabpage()
@@ -67,7 +70,7 @@ function Layout:close()
 
   if self.tabpage and vim.api.nvim_tabpage_is_valid(self.tabpage) then
     local pagenr = vim.api.nvim_tabpage_get_number(self.tabpage)
-    pcall(vim.cmd, "tabclose " .. pagenr)
+    pcall(vim.cmd --[[@as function]], "tabclose " .. pagenr)
   end
 end
 
@@ -78,6 +81,7 @@ function Layout:init_layout()
   self.file_panel:open()
 end
 
+---@return FileEntry|nil
 function Layout:cur_file()
   if #self.files > 0 then
     return self.files[utils.clamp(self.file_idx, 1, #self.files)]
@@ -86,6 +90,8 @@ function Layout:cur_file()
 end
 
 -- sets selected file
+---@param file FileEntry
+---@param focus "left"|"right"?
 function Layout:set_file(file, focus)
   self:ensure_layout()
   if self:file_safeguard() or not file then
@@ -121,7 +127,7 @@ function Layout:set_file(file, focus)
     -- set focus on specified window
     if focus == "right" then
       vim.api.nvim_set_current_win(self.right_winid)
-    else
+    elseif focus == "left" then
       vim.api.nvim_set_current_win(self.left_winid)
     end
   end
@@ -133,12 +139,14 @@ function Layout:update_files()
   self.file_panel:render()
   self.file_panel:redraw()
   local file = self:cur_file()
-  self:set_file(file)
+  if file then
+    self:set_file(file)
+  end
   self.update_needed = false
 end
 
 ---Checks the state of the view layout.
----@return table
+---@return { valid: boolean, tabpage: boolean, left_win: boolean, right_win: boolean }
 function Layout:validate_layout()
   local state = {
     tabpage = vim.api.nvim_tabpage_is_valid(self.tabpage),
@@ -150,7 +158,7 @@ function Layout:validate_layout()
 end
 
 ---Recover the layout after the user has messed it up.
----@param state table
+---@param state { valid: boolean, tabpage: boolean, left_win: boolean, right_win: boolean }
 function Layout:recover_layout(state)
   self.ready = false
   if not state.tabpage then
@@ -236,7 +244,7 @@ function Layout:fix_foreign_windows()
   for _, id in ipairs(win_ids) do
     if not (id == self.file_panel.winid or id == self.left_winid or id == self.right_winid) then
       for k, v in pairs(win_reset_opts) do
-        vim.api.nvim_win_set_option(id, k, v)
+        vim.api.nvim_set_option_value(k, v, { win = id })
       end
     end
   end

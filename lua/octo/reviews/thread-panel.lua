@@ -5,7 +5,6 @@ local vim = vim
 local M = {}
 
 function M.show_review_threads()
-  -- This function is called from a very broad CursorHold event
   -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
@@ -28,11 +27,17 @@ function M.show_review_threads()
 
   local pr = file.pull_request
   local review_level = review:get_level()
+  ---@type PullRequestReviewThread[]
   local threads = vim.tbl_values(review.threads)
+  table.sort(threads, function(t1, t2)
+    return t1.startLine < t2.startLine
+  end)
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   -- get threads associated with current line
+  ---@type PullRequestReviewThread[]
   local threads_at_cursor = {}
+  local index = 1
   for _, thread in ipairs(threads) do
     if
       review_level == "PR"
@@ -41,6 +46,9 @@ function M.show_review_threads()
       and thread.line >= line
     then
       table.insert(threads_at_cursor, thread)
+      if math.abs(thread.startLine - line) < math.abs(threads_at_cursor[index].startLine - line) then
+        index = #threads_at_cursor
+      end
     elseif review_level == "COMMIT" then
       local commit
       if split == "LEFT" then
@@ -51,6 +59,7 @@ function M.show_review_threads()
       for _, comment in ipairs(thread.comments.nodes) do
         if commit == comment.originalCommit.oid and thread.originalLine == line then
           table.insert(threads_at_cursor, thread)
+          index = 1
           break
         end
       end
@@ -61,42 +70,76 @@ function M.show_review_threads()
   if #threads_at_cursor > 0 then
     review.layout:ensure_layout()
     local alt_win = file:get_alternative_win(split)
-    if vim.api.nvim_win_is_valid(alt_win) then
-      local thread_buffer = M.create_thread_buffer(threads_at_cursor, pr.repo, pr.number, split, file.path)
-      if thread_buffer then
-        table.insert(file.associated_bufs, thread_buffer.bufnr)
-        vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
-        thread_buffer:configure()
-        vim.api.nvim_buf_call(thread_buffer.bufnr, function()
-          vim.cmd [[diffoff!]]
-          pcall(vim.cmd, "normal ]c")
-        end)
+    local thread_buffer = M.create_thread_buffer(index, threads_at_cursor, pr.repo, pr.number, split, file.path)
+    if thread_buffer then
+      table.insert(file.associated_bufs, thread_buffer.bufnr)
+      local thread_winid = review.layout.thread_winid
+      if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
+        review.layout.thread_winid = vim.api.nvim_open_win(
+          thread_buffer.bufnr, true, {
+            relative = "win",
+            win = alt_win,
+            anchor = "NW",
+            width = vim.api.nvim_win_get_width(alt_win) - 4,
+            height = vim.api.nvim_win_get_height(alt_win) - 4,
+            row = 1,
+            col = 1,
+            border = "single",
+            zindex = 3,
+          }
+        )
+        vim.wo[review.layout.thread_winid].winhighlight = vim.iter({
+          "NormalFloat:OctoThreadPanelFloat",
+          "FloatBorder:OctoThreadPanelFloatBoarder",
+          "SignColumn:OctoThreadPanelSignColumn",
+        }):join(",")
+      else
+        vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
+        vim.api.nvim_set_current_win(thread_winid)
       end
+      thread_buffer:configure()
+      vim.api.nvim_buf_call(thread_buffer.bufnr, function()
+        pcall(vim.cmd --[[@as function]], "normal ]c")
+      end)
     end
   else
     -- no threads at the current line, hide the thread buffer
-    local alt_buf = file:get_alternative_buf(split)
-    local alt_win = file:get_alternative_win(split)
-    local cur_win = file:get_win(split)
-    if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
-      local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
-      if current_alt_bufnr ~= alt_buf then
-        -- if we are not showing the corresponging alternative diff buffer, do so
-        vim.api.nvim_win_set_buf(alt_win, alt_buf)
-
-        -- show the diff
-        file:show_diff()
-      end
+    local thread_winid = review.layout.thread_winid
+    if thread_winid ~= -1 or vim.api.nvim_win_is_valid(thread_winid) then
+      vim.api.nvim_win_close(thread_winid, true)
+      review.layout.thread_winid = -1
     end
   end
 end
 
-function M.create_thread_buffer(threads, repo, number, side, path)
+function M.hide_review_threads()
+  local review = require("octo.reviews").get_current_review()
+  if not review then
+    -- cant find an active review
+    return
+  end
+
+  local thread_winid = review.layout.thread_winid
+  if thread_winid ~= -1 or vim.api.nvim_win_is_valid(thread_winid) then
+    vim.api.nvim_win_close(thread_winid, true)
+    review.layout.thread_winid = -1
+  end
+end
+
+---@param index integer
+---@param threads PullRequestReviewThread[]
+---@param repo string
+---@param number integer
+---@param side 'LEFT'|'RIGHT'
+---@param path string
+---@return OctoBuffer
+function M.create_thread_buffer(index, threads, repo, number, side, path)
   local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
   if not vim.startswith(path, "/") then
     path = "/" .. path
   end
-  local line = threads[1].originalStartLine ~= vim.NIL and threads[1].originalStartLine or threads[1].originalLine
+  local line = threads[index].originalStartLine ~= vim.NIL and threads[index].originalStartLine or threads[index].originalLine
   local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
   local bufnr = vim.fn.bufnr(bufname)
   local buffer

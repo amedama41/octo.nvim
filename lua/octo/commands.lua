@@ -171,7 +171,11 @@ function M.setup()
       view = function(repo)
         if repo == nil and utils.cwd_is_git() then
           repo = utils.get_remote_name()
-          utils.get_repo(nil, repo)
+          if repo == nil then
+            utils.error "Argument for repo name is required"
+          else
+            utils.get_repo(nil, repo)
+          end
         elseif repo == nil then
           utils.error "Argument for repo name is required"
         else
@@ -323,7 +327,7 @@ function M.setup()
     },
     card = card_commands,
     cardv2 = {
-      set = function(...)
+      set = function()
         M.set_project_v2_card()
       end,
       remove = function()
@@ -352,11 +356,13 @@ function M.setup()
   })
 end
 
+---@param repo string?
+---@param ... string
 function M.process_varargs(repo, ...)
   local args = table.pack(...)
   if utils.is_blank(repo) then
     repo = utils.get_remote_name()
-  elseif #vim.split(repo, "/") ~= 2 then
+  elseif #vim.split(assert(repo), "/") ~= 2 then
     table.insert(args, repo)
     args.n = args.n + 1
     repo = utils.get_remote_name()
@@ -377,6 +383,9 @@ function M.process_varargs(repo, ...)
   return opts
 end
 
+---@param object string?
+---@param action string?
+---@param ... string?
 function M.octo(object, action, ...)
   if not _G.octo_colors_loaded then
     colors.setup()
@@ -451,12 +460,14 @@ function M.add_comment()
 
   local _thread = buffer:get_thread_at_cursor()
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
+    assert(_thread)
     comment_kind = "PullRequestReviewComment"
     comment.pullRequestReview = { id = reviews.get_current_review().id }
     comment.state = "PENDING"
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif not utils.is_blank(_thread) and not buffer:isReviewThread() then
+    assert(_thread)
     comment_kind = "PullRequestComment"
     comment.state = ""
     comment.replyTo = _thread.replyTo
@@ -472,6 +483,7 @@ function M.add_comment()
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
+    assert(_thread)
     vim.api.nvim_buf_set_lines(bufnr, _thread.bufferEndLine, _thread.bufferEndLine, false, { "x", "x", "x", "x" })
     writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1)
     vim.fn.execute(":" .. _thread.bufferEndLine + 3)
@@ -479,7 +491,7 @@ function M.add_comment()
   end
 
   -- drop undo history
-  utils.clear_history()
+  utils.clear_history(bufnr)
 end
 
 function M.delete_comment()
@@ -580,20 +592,8 @@ function M.delete_comment()
             local bufname = vim.api.nvim_buf_get_name(bufnr)
             local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
             if split then
-              local layout = reviews.get_current_review().layout
-              local file = layout:cur_file()
-              local diff_win = file:get_win(split)
-              local thread_win = file:get_alternative_win(split)
-              local original_buf = file:get_alternative_buf(split)
-              -- move focus to the split containing the diff buffer
-              -- restore the diff buffer so that window is not closed when deleting thread buffer
-              vim.api.nvim_win_set_buf(thread_win, original_buf)
-              -- delete the thread buffer
+              review.layout.thread_winid = -1
               pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-              -- refresh signs and virtual text
-              file:place_signs()
-              -- diff buffers
-              file:show_diff()
             end
           end
         end
@@ -602,6 +602,10 @@ function M.delete_comment()
   end
 end
 
+---@param bufnr integer
+---@param thread any TODO
+---@param thread_id string
+---@param thread_line integer?
 local function update_review_thread_header(bufnr, thread, thread_id, thread_line)
   local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
   local end_line = thread.originalLine
@@ -618,7 +622,7 @@ local function update_review_thread_header(bufnr, thread, thread_id, thread_line
     commit = commit_id,
     isOutdated = thread.isOutdated,
     isResolved = thread.isResolved,
-  }, thread_line - 2)
+  }, thread_line - 1)
   local threads = thread.pullRequest.reviewThreads.nodes
   local review = reviews.get_current_review()
   if review then
@@ -645,6 +649,7 @@ function M.resolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        -- TODO type
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
@@ -675,6 +680,7 @@ function M.unresolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        -- TODO type
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
@@ -685,6 +691,7 @@ function M.unresolve_thread()
   }
 end
 
+---@param state "OPEN"|"CLOSED"
 function M.change_state(state)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -711,6 +718,7 @@ function M.change_state(state)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type UpdateIssueStateMutationResponse|UpdatePullRequestStateMutationResponse
         local resp = vim.fn.json_decode(output)
         local new_state, obj
         if buffer:isIssue() then
@@ -719,6 +727,8 @@ function M.change_state(state)
         elseif buffer:isPullRequest() then
           obj = resp.data.updatePullRequest.pullRequest
           new_state = obj.state
+        else
+          assert(false)
         end
         if state == new_state then
           buffer.node.state = new_state
@@ -731,6 +741,7 @@ function M.change_state(state)
   }
 end
 
+---@param repo string?
 function M.create_issue(repo)
   if not repo then
     repo = utils.get_remote_name()
@@ -742,6 +753,7 @@ function M.create_issue(repo)
 
   local templates = utils.get_repo_templates(repo)
   if not utils.is_blank(templates) and #templates.issueTemplates > 0 then
+    ---@param selected IssueTemplate
     require("octo.picker").issue_templates(templates.issueTemplates, function(selected)
       M.save_issue {
         repo = repo,
@@ -758,6 +770,7 @@ function M.create_issue(repo)
   end
 end
 
+---@param opts { repo: string, base_title: string?, base_body: string? }
 function M.save_issue(opts)
   vim.fn.inputsave()
   local title = vim.fn.input(string.format("Creating issue in %s. Enter title: ", opts.repo), opts.base_title)
@@ -789,6 +802,7 @@ function M.save_issue(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type CreateIssueMutationResponse
         local resp = vim.fn.json_decode(output)
         require("octo").create_buffer("issue", resp.data.createIssue.issue, opts.repo, true)
         vim.fn.execute "normal! Gk"
@@ -798,8 +812,9 @@ function M.save_issue(opts)
   }
 end
 
-function M.create_pr(is_draft)
-  is_draft = "draft" == is_draft and true or false
+---@param draft string?
+function M.create_pr(draft)
+  local is_draft = "draft" == draft and true or false
   local conf = config.values
   local select = conf.pull_requests.always_select_remote_on_create or false
 
@@ -880,7 +895,7 @@ function M.create_pr(is_draft)
       if ok then
         local job = Job:new {
           command = "git",
-          args = { "push", remote, local_branch .. ":" .. remote_branch },
+          args = { "push", "--set-upstream", remote, local_branch .. ":" .. remote_branch },
           cwd = vim.fn.getcwd(),
         }
         job:sync()
@@ -916,6 +931,17 @@ function M.create_pr(is_draft)
   }
 end
 
+---@class SavePrOpts
+---@field repo any
+---@field base_title string
+---@field base_body string?
+---@field candidates string[]
+---@field candidate_entries string[]
+---@field is_draft boolean
+---@field info Repository
+---@field remote_branch string
+
+---@param opts SavePrOpts
 function M.save_pr(opts)
   vim.fn.inputsave()
   local repo_idx = 1
@@ -998,6 +1024,7 @@ function M.save_pr(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
+          ---@type CreatePrMutationResponse
           local resp = vim.fn.json_decode(output)
           local pr = resp.data.createPullRequest.pullRequest
           utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
@@ -1155,12 +1182,15 @@ function M.show_pr_diff()
         local wbufnr = vim.api.nvim_create_buf(true, true)
         vim.api.nvim_buf_set_lines(wbufnr, 0, -1, false, lines)
         vim.api.nvim_set_current_buf(wbufnr)
-        vim.api.nvim_buf_set_option(wbufnr, "filetype", "diff")
+        vim.api.nvim_set_option_value("filetype", "diff", { buf = wbufnr })
       end
     end,
   }
 end
 
+---@param bufnr integer
+---@param extmark integer
+---@return integer
 local function get_reaction_line(bufnr, extmark)
   local prev_extmark = extmark
   local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, { details = true })
@@ -1168,6 +1198,12 @@ local function get_reaction_line(bufnr, extmark)
   return end_line + 3
 end
 
+---@param bufnr integer
+---@param buffer OctoBuffer
+---@return integer|unknown
+---@return unknown
+---@return boolean|unknown
+---@return unknown
 local function get_reaction_info(bufnr, buffer)
   local reaction_groups, reaction_line, insert_line, id
   local comment = buffer:get_comment_at_cursor()
@@ -1191,6 +1227,7 @@ local function get_reaction_info(bufnr, buffer)
   return reaction_line, reaction_groups, insert_line, id
 end
 
+---@param reaction string
 function M.reaction_action(reaction)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1232,6 +1269,7 @@ function M.reaction_action(reaction)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type AddReactionMutationResponse|RemoveReactionMutationResponse
         local resp = vim.fn.json_decode(output)
         if action == "add" then
           reaction_groups = resp.data.addReaction.subject.reactionGroups
@@ -1273,6 +1311,7 @@ function M.add_project_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
             buffer.node.projectCards = obj.projectCards
@@ -1301,6 +1340,7 @@ function M.remove_project_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             buffer.node.projectCards = obj.projectCards
             writers.write_details(bufnr, obj, true)
@@ -1330,6 +1370,7 @@ function M.move_project_card()
             utils.error(stderr)
           elseif output then
             -- refresh issue/pr details
+            ---@param obj Issue|PullRequest_
             require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
               buffer.node.projectCards = obj.projectCards
               writers.write_details(bufnr, obj, true)
@@ -1374,6 +1415,7 @@ function M.set_project_v2_card()
               elseif update_output then
                 -- TODO do update here
                 -- refresh issue/pr details
+                ---@param obj Issue|PullRequest_
                 require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
                   writers.write_details(bufnr, obj, true)
                   buffer.node.projectCards = obj.projectCards
@@ -1405,6 +1447,7 @@ function M.remove_project_v2_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             buffer.node.projectCards = obj.projectCards
             writers.write_details(bufnr, obj, true)
@@ -1415,10 +1458,12 @@ function M.remove_project_v2_card()
   end)
 end
 
+---@param bufnr integer?
 function M.reload(bufnr)
   require("octo").load_buffer(bufnr)
 end
 
+---@param label string?
 function M.create_label(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1455,11 +1500,13 @@ function M.create_label(label)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type CreateLabelMutationResponse
         local resp = vim.fn.json_decode(output)
         local label = resp.data.createLabel.label
         utils.info("Created label: " .. label.name)
 
         -- refresh issue/pr details
+        ---@param obj Issue|PullRequest_
         require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
           writers.write_details(bufnr, obj, true)
         end)
@@ -1480,6 +1527,7 @@ function M.add_label(label)
     utils.error "Cannot get issue/pr id"
   end
 
+  ---@param label_id string
   local cb = function(label_id)
     local query = graphql("add_labels_mutation", iid, label_id)
     gh.run {
@@ -1489,6 +1537,7 @@ function M.add_label(label)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
           end)
@@ -1520,6 +1569,7 @@ function M.remove_label(label)
     utils.error "Cannot get issue/pr id"
   end
 
+  ---@param label_id string
   local cb = function(label_id)
     local query = graphql("remove_labels_mutation", iid, label_id)
     gh.run {
@@ -1529,6 +1579,7 @@ function M.remove_label(label)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
           end)
@@ -1549,6 +1600,8 @@ function M.remove_label(label)
   end
 end
 
+---@param subject "assignee"|"reviewer"
+---@param login string?
 function M.add_user(subject, login)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1562,6 +1615,7 @@ function M.add_user(subject, login)
     utils.error "Cannot get issue/pr id"
   end
 
+  ---@param user_id string
   local cb = function(user_id)
     local query
     if subject == "assignee" then
@@ -1579,6 +1633,7 @@ function M.add_user(subject, login)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
             vim.cmd [[stopinsert]]
@@ -1599,6 +1654,7 @@ function M.add_user(subject, login)
   end
 end
 
+---@param login string?
 function M.remove_assignee(login)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1611,6 +1667,7 @@ function M.remove_assignee(login)
     utils.error "Cannot get issue/pr id"
   end
 
+  ---@param user_id string
   local cb = function(user_id)
     local query = graphql("remove_assignees_mutation", iid, user_id)
     gh.run {
@@ -1620,6 +1677,7 @@ function M.remove_assignee(login)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
+          ---@param obj Issue|PullRequest_
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
           end)
@@ -1651,6 +1709,7 @@ function M.copy_url()
 end
 
 function M.actions()
+  ---@type { object: string, name: string, fun: function }[]
   local flattened_actions = {}
 
   for object, commands in pairs(M.commands) do
