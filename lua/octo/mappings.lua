@@ -223,7 +223,7 @@ return {
     end
   end,
   close_review_win = function()
-    vim.api.nvim_win_close(vim.api.nvim_get_current_win())
+    vim.api.nvim_win_close(vim.api.nvim_get_current_win(), true)
   end,
   approve_review = function()
     local current_review = reviews.get_current_review()

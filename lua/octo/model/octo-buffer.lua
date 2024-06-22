@@ -75,11 +75,13 @@ M.OctoBuffer = OctoBuffer
 ---Apply the buffer mappings
 function OctoBuffer:apply_mappings()
   ---@type OctoMappingsWindow
-  local kind = self.kind
+  local kind
   if self.kind == "pull" then
     kind = "pull_request"
   elseif self.kind == "reviewthread" then
     kind = "review_thread"
+  else
+    kind = self.kind --[[@as OctoMappingsWindow]]
   end
   utils.apply_mappings(kind, self.bufnr)
 end

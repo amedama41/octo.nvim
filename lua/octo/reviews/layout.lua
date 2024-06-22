@@ -70,7 +70,7 @@ function Layout:close()
 
   if self.tabpage and vim.api.nvim_tabpage_is_valid(self.tabpage) then
     local pagenr = vim.api.nvim_tabpage_get_number(self.tabpage)
-    pcall(vim.cmd, "tabclose " .. pagenr)
+    pcall(vim.cmd --[[@as function]], "tabclose " .. pagenr)
   end
 end
 

@@ -11,7 +11,7 @@ local M = {}
 ---@field endLine integer?
 ---@field namespace integer
 ---@field reactionGroups table[]
----@field reactionLine integer
+---@field reactionLine integer?
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
 ---@field viewerDidAuthor boolean
@@ -37,7 +37,7 @@ CommentMetadata.__index = CommentMetadata
 ---@field extmark integer
 ---@field namespace integer
 ---@field reactionGroups table[]
----@field reactionLine integer
+---@field reactionLine integer?
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
 ---@field viewerDidAuthor boolean

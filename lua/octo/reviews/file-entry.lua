@@ -135,35 +135,41 @@ end
 
 ---Get the window id for the alternative side of the provided buffer
 ---@param split "LEFT"|"RIGHT"
----@return integer?
+---@return integer
 function FileEntry:get_alternative_win(split)
   if split:lower() == "left" then
     return self.right_winid
   elseif split:lower() == "right" then
     return self.left_winid
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---Get the buffer id for the alternative side of the provided buffer
 ---@param split "LEFT"|"RIGHT"
----@return integer?
+---@return integer
 function FileEntry:get_alternative_buf(split)
   if split:lower() == "left" then
     return self.right_bufid
   elseif split:lower() == "right" then
     return self.left_bufid
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---Get the window id for the side of the provided buffer
 ---@param split "LEFT"|"RIGHT"
----@return integer?
+---@return integer
 function FileEntry:get_win(split)
   if split:lower() == "left" then
     return self.left_winid
   elseif split:lower() == "right" then
     return self.right_winid
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---Get the buffer id for the side of the provided buffer
@@ -192,7 +198,7 @@ function FileEntry:fetch()
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
-    left_path = self.previous_path
+    left_path = assert(self.previous_path)
   end
 
   -- fetch right version
@@ -219,7 +225,7 @@ function FileEntry:fetch()
 
   -- wait until we have both versions
   return vim.wait(conf.timeout, function()
-    return self.left_lines and self.right_lines
+    return self.left_lines and self.right_lines and true
   end)
 end
 
@@ -286,12 +292,12 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      pcall(vim.cmd, [[filetype detect]])
-      pcall(vim.cmd, [[doau BufEnter]])
-      pcall(vim.cmd, [[diffthis]])
+      pcall(vim.cmd --[[@as function]], [[filetype detect]])
+      pcall(vim.cmd --[[@as function]], [[doau BufEnter]])
+      pcall(vim.cmd --[[@as function]], [[diffthis]])
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      pcall(vim.cmd, [[exec "normal! \<c-y>"]])
+      pcall(vim.cmd --[[@as function]], [[exec "normal! \<c-y>"]])
     end)
   end
 end

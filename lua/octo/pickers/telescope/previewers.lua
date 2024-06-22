@@ -76,10 +76,10 @@ local gist = defaulter(function(opts)
         if file.text then
           vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(file.text, "\n"))
         else
-          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, entry.gist.description)
+          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { entry.gist.description })
         end
         vim.api.nvim_buf_call(bufnr, function()
-          pcall(vim.cmd, "set filetype=" .. string.gsub(file.extension, "\\.", ""))
+          pcall(vim.cmd --[[@as function]], "set filetype=" .. string.gsub(file.extension, "\\.", ""))
         end)
       end
     end,

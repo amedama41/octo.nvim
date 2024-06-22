@@ -171,7 +171,11 @@ function M.setup()
       view = function(repo)
         if repo == nil and utils.cwd_is_git() then
           repo = utils.get_remote_name()
-          utils.get_repo(nil, repo)
+          if repo == nil then
+            utils.error "Argument for repo name is required"
+          else
+            utils.get_repo(nil, repo)
+          end
         elseif repo == nil then
           utils.error "Argument for repo name is required"
         else
@@ -323,7 +327,7 @@ function M.setup()
     },
     card = card_commands,
     cardv2 = {
-      set = function(...)
+      set = function()
         M.set_project_v2_card()
       end,
       remove = function()
@@ -808,9 +812,9 @@ function M.save_issue(opts)
   }
 end
 
----@param is_draft string?
-function M.create_pr(is_draft)
-  is_draft = "draft" == is_draft and true or false
+---@param draft string?
+function M.create_pr(draft)
+  local is_draft = "draft" == draft and true or false
   local conf = config.values
   local select = conf.pull_requests.always_select_remote_on_create or false
 

@@ -60,7 +60,7 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh project view --owner %s --web %s", repo, number)
     end
   end
-  pcall(vim.cmd, "silent !" .. cmd)
+  pcall(vim.cmd --[[@as function]], "silent !" .. cmd)
 end
 
 local function open_file_if_found(path, line)

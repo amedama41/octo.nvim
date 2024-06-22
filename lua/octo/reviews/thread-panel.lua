@@ -99,7 +99,7 @@ function M.show_review_threads()
       end
       thread_buffer:configure()
       vim.api.nvim_buf_call(thread_buffer.bufnr, function()
-        pcall(vim.cmd, "normal ]c")
+        pcall(vim.cmd --[[@as function]], "normal ]c")
       end)
     end
   else

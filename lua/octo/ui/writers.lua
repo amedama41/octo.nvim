@@ -22,7 +22,7 @@ function M.write_block(bufnr, lines, line, mark)
   mark = mark or false
 
   if type(lines) == "string" then
-    lines = vim.split(lines, "\n", true)
+    lines = vim.split(lines, "\n", { plain = true })
   end
 
   -- write content lines
@@ -190,6 +190,7 @@ end
 ---@param line integer
 function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, { title, "" }, line, true)
+  assert(title_mark)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
   local buffer = octo_buffers[bufnr]
   if buffer then
@@ -197,7 +198,7 @@ function M.write_title(bufnr, title, line)
       savedBody = title,
       body = title,
       dirty = false,
-      extmark = tonumber(title_mark),
+      extmark = title_mark,
     }
   end
 end
@@ -240,7 +241,7 @@ function M.write_body(bufnr, issue, line)
     body = " "
   end
   local description = body:gsub("\r\n", "\n")
-  local lines = vim.split(description, "\n", true)
+  local lines = vim.split(description, "\n", { plain = true })
   vim.list_extend(lines, { "" })
   local desc_mark = M.write_block(bufnr, lines, line, true)
   assert(type(desc_mark) == "number")
@@ -290,7 +291,6 @@ function M.write_details(bufnr, issue, update)
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   local details = {}
-  local buffer = octo_buffers[bufnr]
 
   -- repo
   local repo_vt = {
@@ -642,9 +642,10 @@ function M.write_comment(bufnr, comment, kind, line)
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
     comment_body = " "
   end
-  local content = vim.split(comment_body, "\n", true)
+  local content = vim.split(comment_body, "\n", { plain = true })
   vim.list_extend(content, { "" })
   local comment_mark = M.write_block(bufnr, content, line, true)
+  assert(comment_mark)
 
   line = line + #content
 
@@ -730,7 +731,7 @@ local function find_snippet_range(diffhunk_lines)
 end
 
 ---@param opts { left_line: integer?, right_line: integer?, max_lnum: integer }
----@return string[][]?
+---@return string[][]
 local function get_lnum_chunks(opts)
   if not opts.left_line and opts.right_line then
     return {
@@ -764,6 +765,8 @@ local function get_lnum_chunks(opts)
       { " " },
     }
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---@param bufnr integer
@@ -869,6 +872,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
         { "│" },
       })
     elseif vim.startswith(line, "+") then
+      ---@type string[][]
       local vt_line = { { "│" } }
       vim.list_extend(vt_line, get_lnum_chunks { right_line = map.right_side_lines[i], max_lnum = max_lnum })
       vim.list_extend(vt_line, {
@@ -1149,6 +1153,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local conf = config.values
   local max_length = opts.max_length or 80
+  ---@type string[][]
   local chunks = {}
 
   -- repo and date line
@@ -1169,12 +1174,12 @@ function M.write_issue_summary(bufnr, issue, opts)
 
   -- issue body
   local body = vim.split(issue.body, "\n")
-  body = table.concat(body, " ")
-  body = body:gsub("[%c]", " ")
-  body = body:sub(1, max_length - 4 - 2) .. "…"
+  local body_str = table.concat(body, " ")
+  body_str = body_str:gsub("[%c]", " ")
+  body_str = body_str:sub(1, max_length - 4 - 2) .. "…"
   table.insert(chunks, {
     { " " },
-    { body },
+    { body_str },
   })
   table.insert(chunks, { { "" } })
 
@@ -1492,7 +1497,7 @@ function M.write_threads(bufnr, threads)
     buffer.threadsMetadata[tostring(thread_mark_id)] = ThreadMetadata:new {
       threadId = thread.id,
       replyTo = thread.comments.nodes[1].id,
-      replyToRest = utils.extract_rest_id(thread.comments.nodes[1].url),
+      replyToRest = assert(utils.extract_rest_id(thread.comments.nodes[1].url)),
       reviewId = thread.comments.nodes[1].pullRequestReview.id,
       path = thread.path,
       line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,

@@ -1133,7 +1133,7 @@ function M.process_patch(patch)
 end
 
 -- calculate GutHub diffstat histogram bar
----@param stats GitStats
+---@param stats { additions: integer, deletions: integer }
 ---@return { total: integer, additions: integer, deletions: integer, neutral: integer }
 function M.diffstat(stats)
   -- round up to closest multiple of 5
@@ -1303,7 +1303,7 @@ end
 ---@param events string[] list of events
 ---@param winnr integer window id of preview window
 ---@param bufnrs integer[] list of buffers where the preview window will remain visible
----@see |autocmd-events|
+---@see see |autocmd-events|
 function M.close_preview_autocmd(events, winnr, bufnrs)
   local augroup = vim.api.nvim_create_augroup("preview_window_" .. winnr, {
     clear = true,
@@ -1495,6 +1495,10 @@ function M.get_lines_from_context(calling_context)
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
+  else
+    assert(false)
+    line_number_start = 0
+    line_number_end = 0
   end
   return line_number_start, line_number_end
 end

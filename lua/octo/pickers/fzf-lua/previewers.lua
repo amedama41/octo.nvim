@@ -283,7 +283,7 @@ M.gist = function(formatted_gists)
       vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, entry.gist.description)
     end
     vim.api.nvim_buf_call(tmpbuf, function()
-      pcall(vim.cmd, "set filetype=" .. string.gsub(file.extension, "\\.", ""))
+      pcall(vim.cmd --[[@as function]], "set filetype=" .. string.gsub(file.extension, "\\.", ""))
     end)
 
     self:set_preview_buf(tmpbuf)
