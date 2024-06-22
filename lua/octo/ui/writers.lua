@@ -1272,7 +1272,7 @@ function M.write_commit_event(bufnr, item)
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
   table.insert(vt, { " '", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.commit.committedDate), "OctoDate" })
   write_event(bufnr, vt)
 end
 
