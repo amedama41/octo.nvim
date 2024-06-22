@@ -41,6 +41,7 @@ function M.setup()
       local line = vim.api.nvim_get_current_line()
       local pos = vim.fn.col "."
 
+      ---@type integer|nil, integer|nil
       local start, finish = 0, 0
       while true do
         start, finish = string.find(line, "#(%d*)", start + 1)

@@ -12,17 +12,17 @@ return {
     local buffer = octo_buffers[bufnr]
     local repo = buffer.repo
     if repo then
-      require("octo.picker").issues { repo = repo }
+      require("octo.pickers.telescope.provider").issues { repo = repo }
     end
   end,
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,
   list_commits = function()
-    require("octo.picker").commits()
+    require("octo.pickers.telescope.provider").commits()
   end,
   list_changed_files = function()
-    require("octo.picker").changed_files()
+    require("octo.pickers.telescope.provider").changed_files()
   end,
   show_pr_diff = function()
     require("octo.commands").show_pr_diff()
@@ -139,13 +139,19 @@ return {
   prev_thread = function()
     require("octo.reviews.file-panel").prev_thread()
   end,
+  open_thread = function()
+    require("octo.reviews.thread-panel").show_review_threads()
+  end,
+  close_thread = function()
+    require("octo.reviews.thread-panel").hide_review_threads()
+  end,
   select_next_entry = function()
     local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
       local file_idx = layout.file_idx % #layout.files + 1
       local file = layout.files[file_idx]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file)
       end
     end
   end,
@@ -155,7 +161,7 @@ return {
       local file_idx = (layout.file_idx - 2) % #layout.files + 1
       local file = layout.files[file_idx]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file)
       end
     end
   end,
@@ -164,7 +170,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.files[1]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file)
       end
     end
   end,
@@ -173,7 +179,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.files[#layout.files]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file)
       end
     end
   end,
@@ -194,7 +200,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.file_panel:get_file_at_cursor()
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file, "right")
       end
     end
   end,
@@ -217,18 +223,27 @@ return {
     end
   end,
   close_review_win = function()
-    vim.api.nvim_win_close(vim.api.nvim_get_current_win())
+    vim.api.nvim_win_close(vim.api.nvim_get_current_win(), true)
   end,
   approve_review = function()
     local current_review = reviews.get_current_review()
+    if current_review == nil then
+      return
+    end
     current_review:submit "APPROVE"
   end,
   comment_review = function()
     local current_review = reviews.get_current_review()
+    if current_review == nil then
+      return
+    end
     current_review:submit "COMMENT"
   end,
   request_changes = function()
     local current_review = reviews.get_current_review()
+    if current_review == nil then
+      return
+    end
     current_review:submit "REQUEST_CHANGES"
   end,
   toggle_viewed = function()

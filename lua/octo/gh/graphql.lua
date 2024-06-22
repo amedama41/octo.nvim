@@ -1,5 +1,7 @@
 local M = {}
 
+---@alias AddReactionMutationResponse GraphQLResponse<{ addReaction: { subject: { reactionGroups: ReactionGroup[] } } }>
+
 -- https://docs.github.com/en/graphql/reference/mutations#addreaction
 M.add_reaction_mutation = [[
   mutation {
@@ -16,6 +18,8 @@ M.add_reaction_mutation = [[
     }
   }
 ]]
+
+---@alias RemoveReactionMutationResponse GraphQLResponse<{ removeReaction: { subject: { reactionGroups: ReactionGroup[] } } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#removereaction
 M.remove_reaction_mutation = [[
@@ -163,6 +167,8 @@ M.unresolve_review_thread_mutation = [[
     }
   }
 ]]
+
+---@alias StartReviewMutationResponse GraphQLResponse<{ addPullRequestReview: { pullRequestReview: { id: string, state: string, pullRequest: { reviewThreads: { nodes: PullRequestReviewThread[] } } } } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review_mutation = [[
@@ -470,6 +476,12 @@ mutation {
 }
 ]]
 
+---@class UpdateIssueComment
+---@field id string
+---@field body string
+
+---@alias AddIssueCommentMutationResponse GraphQLResponse<{ addComment: { commentEdge: { node: UpdateIssueComment } } }>
+
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment_mutation = [[
   mutation {
@@ -483,6 +495,8 @@ M.add_issue_comment_mutation = [[
     }
   }
 ]]
+
+---@alias UpdateIssueCommentMutationResponse GraphQLResponse<{ updateIssueComment: { issueComment: UpdateIssueComment } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
 M.update_issue_comment_mutation = [[
@@ -558,6 +572,8 @@ M.update_pull_request_review_comment_mutation = [[
   }
 ]]
 
+---@alias UpdatePullRequestReviewMutationResponse GraphQLResponse<{ updatePullRequestReview: { pullRequestReview: { id: string, state: PullRequestReviewState, body: string } } }>
+
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review_mutation = [[
   mutation {
@@ -570,6 +586,9 @@ M.update_pull_request_review_mutation = [[
     }
   }
 ]]
+
+---TODO: exclude resolvedBy
+---@alias AddPullRequestReviewCommentMutationResponse GraphQLResponse<{ addPullRequestReviewComment: { comment: { id: string, body: string, pullRequest: { reviewThreads: { nodes: PullRequestReviewThread[] } } } } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_comment_mutation = [[
@@ -793,6 +812,9 @@ M.update_issue_mutation = [[
     }
   }
 ]]
+
+---@alias CreateIssueMutationResponse GraphQLResponse<{ createIssue: { issue: Issue } }>
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation = [[
   mutation {
@@ -948,6 +970,30 @@ M.update_issue_mutation = [[
     }
   }
 ]]
+
+---@class IssueBase
+---@field id string
+---@field number integer
+---@field state IssueState
+---@field title string
+---@field body string
+---@field createdAt string
+---@field closedAt string?
+---@field updatedAt string
+---@field url string
+---@field repository { nameWithOwner: string }
+---@field milestone { title: string, state: MilestoneState }?
+---@field author { login: string }
+---@field participants { nodes: { login: string }[] }
+---@field reactionGroups ReactionGroup[]?
+---@field timelineItems { pageInfo: PageInfo?, nodes: IssueTimelineItems[] }
+---@field labels { nodes: Label[] }?
+---@field assignee { nodes: { id: string, login: string, isViewer: boolean }[] }
+
+---@class UpdateIssue: IssueBase
+---@field comments IssueCommentBase[]
+
+---@alias UpdateIssueStateMutationResponse GraphQLResponse<{ updateIssue: { issue: UpdateIssue } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -1105,6 +1151,76 @@ M.update_pull_request_mutation = [[
     }
   }
 ]]
+
+---@class PullRequestReviewCommentBase
+---@field id string
+---@field body string
+---@field diffHunk string
+---@field author { login: string }?
+---@field authorAssociation CommentAuthorAssociation
+---@field viewerDidAuthor boolean
+---@field viewerCanUpdate boolean
+---@field viewerCanDelete boolean
+---@field state PullRequestReviewCommentState
+---@field url string
+---@field replyTo { id: string, url: string }?
+---@field reactionGroups ReactionGroup[]?
+
+---@class UpdatePullRequestReviewComment: PullRequestReviewCommentBase
+---@field commit { oid: string, abbreviatedOid: string }?
+---@field originalPosition integer
+---@field position integer?
+---@field outdated boolean
+
+---@class UpdatePullRequestReview
+---@field __typename "PullRequestReview"
+---@field id string
+---@field body string
+---@field createdAt string
+---@field viewerCanUpdate boolean
+---@field viewerCanDelete boolean
+---@field reactionGroups ReactionGroup[]?
+---@field author { login: string }?
+---@field viewerDidAuthor boolean
+---@field state PullRequestReviewState
+---@field comments { totalCount: integer, nodes: UpdatePullRequestReviewComment[] }
+
+---@class PullRequestBase
+---@field id string
+---@field number integer
+---@field state PullRequestState
+---@field title string
+---@field body string
+---@field createdAt string
+---@field closedAt string?
+---@field updatedAt string
+---@field url string
+---@field files { nodes: PullRequestChangedFile[] }
+---@field merged boolean
+---@field participants { nodes: { login: string }[] }
+---@field additions integer
+---@field deletions integer
+---@field commits { totalCount: integer }
+---@field changedFiles integer
+---@field headRefName string
+---@field headRefOid string
+---@field baseRefName string
+---@field baseRefOid string
+---@field baseRepository { name: string, nameWithOwner: string }
+---@field milestone { title: string, state: MilestoneState }?
+---@field author { login: string }?
+---@field reactionGroups ReactionGroup[]?
+---@field labels { nodes: Label[] }?
+---@field assignees { nodes: { id: string, login: string, isViewer: boolean }[] }
+---@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { login: string, isViewer: boolean } }[] }
+
+---@alias UpdatePullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueComment|UpdatePullRequestReview
+---
+---@class UpdatePullRequest: PullRequestBase
+---@field mergedBy { login: string }
+---@field timelineItems { pageInfo: PageInfo?, nodes: UpdatePullRequestTimelineItems[] }
+
+---@alias UpdatePullRequestStateMutationResponse GraphQLResponse<{ updatePullRequest: { pullRequest: UpdatePullRequest } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_state_mutation = [[
@@ -1393,6 +1509,49 @@ M.update_pull_request_state_mutation = [[
   }
 ]]
 
+---@alias PullRequestReviewState "APPROVED"|"CHANGES_REQUESTED"|"COMMENTED"|"DISMISSED"|"PENDING"
+---@alias PullRequestReviewCommentState "PENDING"|"SUBMITTED"
+---@alias CommentAuthorAssociation "COLLABORATOR"|"CONTRIBUTOR"|"FIRST_TIMER"|"FIRST_TIME_CONTRIBUTOR"|"MANNEQUIN"|"MEMBER"|"NONE"|"OWNER"
+---@alias DiffSide "LEFT"|"RIGHT"
+
+---@class PullRequestReviewComment: PullRequestReviewCommentBase
+---@field createdAt string
+---@field lastEditedAt string?
+
+---@class PullRequestReviewCommentForPRReviewThread: PullRequestReviewComment
+---@field originalCommit { oid: string, abbreviatedOid: string }?
+---@field pullRequestReview { id: string, state: PullRequestReviewState }
+---@field path string
+
+---@class PullRequestReviewCommentForPRReview: PullRequestReviewComment
+---@field commit { oid: string, abbreviatedOid: string }?
+---@field originalPosition integer
+---@field position integer?
+---@field outdated boolean
+
+---@class PullRequestReviewThread
+---@field id string
+---@field path string
+---@field diffSide DiffSide
+---@field startDiffSide DiffSide?
+---@field line integer?
+---@field originalLine integer
+---@field startLine integer?
+---@field originalStartLine integer?
+---@field isResolved boolean
+---@field resolvedBy { login: string }?
+---@field isCollapsed boolean
+---@field isOutdated boolean
+---@field comments { nodes: PullRequestReviewCommentForPRReviewThread[] }
+
+---@class BriefPullRequestReview
+---@field id string
+---@field viewerDidAuthor boolean
+
+---@class GraphQLResponse<T>: { data: T, errors: any }
+
+---@alias PendingReviewThreadsQueryResponse GraphQLResponse<{ repository: { pullRequest: { reviews: { nodes: BriefPullRequestReview[] }, reviewThreads: { nodes: PullRequestReviewThread[] } } } }>
+
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
 query {
@@ -1458,6 +1617,8 @@ query {
 }
 ]]
 
+---@alias ReviewThreadsQueryResponse GraphQLResponse<{ repository: { pullRequest: { reviewThreads: { nodes: BriefPullRequestReview[] } } } }>
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads_query = [[
 query($endCursor: String) {
@@ -1520,6 +1681,144 @@ query($endCursor: String) {
   }
 }
 ]]
+
+---@alias ReactionContent "CONFUSED"|"EYES"|"HEART"|"HOORAY"|"LAUGH"|"ROCKET"|"THUMBS_DOWN"|"THUMBS_UP"
+---@alias PullRequestState "CLOSED"|"MERGED"|"OPEN"
+---@alias PullRequestReviewDecision "APPROVED"|"CHANGES_REQUESTED"|"REVIEW_REQUIRED"
+---@alias FileViewedState "DISMISSED"|"UNVIEWED"|"VIEWED"
+---@alias MilestoneState "CLOSED"|"OPEN"
+---@alias ProjectCardState "CONTENT_ONLY"|"NOTE_ONLY"|"REDACTED"
+
+---@class ProjectCard
+---@field id string
+---@field state ProjectCardState?
+---@field column { name: string }?
+---@field project { name: string }
+
+---@class PullRequestChangedFile
+---@field path string
+---@field viewerViewedState FileViewedState
+
+---@class ReactionGroup
+---@field content ReactionContent
+---@field viewerHasReacted boolean
+---@field users { totalCount: integer }
+
+---@class Label
+---@field name string
+---@field color string
+
+---@class Commit
+---@field messageHeadline string
+---@field committedDate string
+---@field oid string
+---@field abbreviatedOid string
+---@field changedFiles integer
+---@field additions integer
+---@field deletions integer
+---@field committer { user: { login: string }? }?
+
+---@class LabeledEvent
+---@field __typename "LabeledEvent"
+---@field actor { login: string }?
+---@field createdAt string
+---@field label Label
+
+---@class UnlabeledEvent
+---@field __typename "UnlabeledEvent"
+---@field actor { login: string }?
+---@field createdAt string
+---@field label Label
+
+---@class AssignedEvent
+---@field __typename "AssignedEvent"
+---@field actor { login: string }?
+---@field assignee { name: string }|{ login: string }|{ login: string, isViewer: boolean }?
+---@field createdAt string
+
+---@class PullRequestCommit
+---@field __typename "PullRequestCommit"
+---@field commit Commit
+
+---@class MergedEvent
+---@field __typename "MergedEvent"
+---@field createdAt string
+---@field actor { login: string }?
+---@field commit { oid: string, abbreviatedOid: string }
+---@field mergeRefName string
+
+---@class ClosedEvent
+---@field __typename "ClosedEvent"
+---@field actor { login: string }?
+---@field createdAt string
+
+---@class ReopenedEvent
+---@field __typename "ReopenedEvent"
+---@field actor { login: string }?
+---@field createdAt string
+
+---@class ReviewRequestedEvent
+---@field __typename "ReviewRequestedEvent"
+---@field createdAt string
+---@field actor { login: string }?
+---@field requestedReviewer { login: string, isViewer: boolean}|{ login: string }|{ name: string }?
+
+---@class ReviewRequestedRemovedEvent
+---@field __typename "ReviewRequestedRemovedEvent"
+---@field createdAt string
+---@field actor { login: string }?
+---@field requestedReviewer { login: string, isViewer: boolean}|{ login: string }|{ name: string }?
+
+---@class ReviewDismissedEvent
+---@field __typename "ReviewDismissedEvent"
+---@field createdAt string
+---@field actor { login: string }?
+---@field dismissalMessage string?
+
+---@class IssueCommentBase
+---@field id string
+---@field body string
+---@field createdAt string
+---@field reactionGroups ReactionGroup[]?
+---@field author { login: string }?
+---@field viewerDidAuthor boolean
+
+---@class IssueComment: IssueBase
+---@field __typename "IssueComment"
+---@field viewerCanUpdate boolean
+---@field viewerCanDelete boolean
+
+---@class PageInfo
+---@field hasNextPage boolean
+---@field endCursor string?
+
+---@class PullRequestReview
+---@field __typename "PullRequestReview"
+---@field id string
+---@field body string
+---@field createdAt string
+---@field viewerCanUpdate boolean
+---@field viewerCanDelete boolean
+---@field reactionGroups ReactionGroup[]?
+---@field author { login: string }?
+---@field viewerDidAuthor boolean
+---@field state PullRequestReviewState
+---@field comments { totalCount: integer, nodes: PullRequestReviewCommentForPRReview[] }
+
+---@alias PullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueComment|PullRequestReview
+
+---@class PullRequest_: PullRequestBase
+---@field isDraft boolean
+---@field repository { nameWithOwner: string }
+---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }?
+---@field viewerDidAuthor boolean
+---@field viewerCanUpdate boolean
+---@field projectCards { nodes: ProjectCard[] }
+---@field timelineItems { pageInfo: PageInfo, nodes: PullRequestTimelineItems[] }
+---@field reviewDecision PullRequestReviewDecision
+---@field reviewThreads { nodes: PullRequestReviewThread[] }
+
+---@alias PullRequestQueryResponse GraphQLResponse<{ repository: { pullRequest: PullRequest_ } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.pull_request_query = [[
@@ -1873,6 +2172,16 @@ query($endCursor: String) {
 }
 ]]
 
+---@alias IssueState "CLOSED"|"OPEN"
+---@alias IssueTimelineItems LabeledEvent|UnlabeledEvent|IssueComment|ClosedEvent|ReopenedEvent|AssignedEvent
+
+---@class Issue: IssueBase
+---@field viewerDidAuthor boolean
+---@field viewerCanUpdate boolean
+---@field projectCards { nodes: ProjectCard[] }
+
+---@alias IssueQueryResponse GraphQLResponse<{ repository: { issue: Issue } }>
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
 query($endCursor: String) {
@@ -2016,6 +2325,8 @@ query($endCursor: String) {
 }
 ]]
 
+---@alias IssueKindQueryResponse GraphQLResponse<{ repository: { issueOrPullRequest: { __typename: "Issue"|"PullRequest" } } }>
+
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
 query {
@@ -2026,6 +2337,34 @@ query {
   }
 }
 ]]
+
+---@class IssueSummary
+---@field __typename "Issue"
+---@field headRefName string
+---@field baseRefName string
+---@field createdAt string
+---@field state IssueState
+---@field number integer
+---@field title string
+---@field body string
+---@field repository { nameWithOwner: string }
+---@field author { login: string }
+---@field authorAssociation CommentAuthorAssociation
+---@field labels { nodes: Label[] }?
+
+---@class PullRequestSummary
+---@field __typename "PullRequest"
+---@field createdAt string
+---@field state PullRequestState
+---@field number integer
+---@field title string
+---@field body string
+---@field repository { nameWithOwner: string }
+---@field author { login: string }
+---@field authorAssociation CommentAuthorAssociation
+---@field labels { nodes: Label[] }?
+
+---@alias IssueSummaryQueryResponse GraphQLResponse<{ repository: { issueOrPullRequest: IssueSummary|PullRequestSummary } }>
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_summary_query = [[
@@ -2073,6 +2412,8 @@ query {
 }
 ]]
 
+---@alias RepositoryIdQueryResponse GraphQLResponse<{ repository: { id: string } }>
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
 query {
@@ -2081,6 +2422,18 @@ query {
   }
 }
 ]]
+
+---@class IssueTemplate
+---@field body string?
+---@field about string?
+---@field name string
+---@field title string?
+
+---@class PullRequestTemplate
+---@field body string?
+---@field filename string?
+
+---@alias RepositoryTemplatesQueryResponse GraphQLResponse<{ repository: { issueTemplates: IssueTemplate[], pullRequestTemplates: PullRequestTemplate[] } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 -- https://docs.github.com/en/graphql/reference/objects#issuetemplate
@@ -2093,6 +2446,15 @@ query {
   }
 }
 ]]
+
+---@class BriefIssue
+---@field __typename "Issue"
+---@field number integer
+---@field title string
+---@field url string
+---@field repository { nameWithOwner: string }
+
+---@alias IssuesQueryResponse GraphQLResponse<{ repository: { issues: { nodes: BriefIssue[] }, pageInfo: PageInfo } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
@@ -2117,6 +2479,18 @@ query($endCursor: String) {
   }
 }
 ]]
+
+---@class BriefPullRequest
+---@field __typename "PullRequest"
+---@field number integer
+---@field title string
+---@field url string
+---@field repository { nameWithOwner: string }
+---@field headRefName string
+---@field isDraft boolean
+
+---@alias PullRequestsQueryResponse GraphQLResponse<{ repository: { pullRequests: { nodes: BriefPullRequest[] }, pageInfo: PageInfo } }>
+
 M.pull_requests_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
@@ -2138,6 +2512,8 @@ query($endCursor: String) {
   }
 }
 ]]
+
+---@alias SearchQueryResponse GraphQLResponse<{ search: { nodes: (BriefIssue|BriefPullRequest)[] } }>
 
 M.search_query = [[
 query {
@@ -2161,6 +2537,17 @@ query {
   }
 }
 ]]
+
+---@class ProjectColumn
+---@field id string
+---@field name string
+
+---@class Project
+---@field id string
+---@field name string
+---@field columns { nodes: ProjectColumn }
+
+---@alias ProjectsQueryResponse GraphQLResponse<{ repository: { projects: { nodes: Project[] } }, user: { projects: { nodes: Project[] } }, organization: { projects: { nodes: Project[] } } }>
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
@@ -2244,6 +2631,17 @@ M.delete_project_card_mutation = [[
     }
   }
 ]]
+
+---@class ProjectV2
+---@field id string
+---@field title string
+---@field url string
+---@field closed boolean
+---@field number integer
+---@field owner { login: string }
+---@field columns { id: string, options: { id: string, name: string } }
+
+---@alias ProjectsQueryV2Response GraphQLResponse<{ repository: { projects: { nodes: ProjectV2[] } }, user: { projects: { nodes: ProjectV2[] } }, organization: { projects: { nodes: ProjectV2[] } } }>
 
 -- https://docs.github.com/en/graphql/reference/objects#projectv2
 M.projects_query_v2 = [[
@@ -2373,6 +2771,8 @@ M.delete_project_v2_item_mutation = [[
   }
 ]]
 
+---@alias CreateLabelMutationResponse GraphQLResponse<{ createLabel: { label: { id: string, name: string } } }>
+
 -- https://docs.github.com/en/graphql/reference/mutations#createlabel
 -- requires application/vnd.github.bane-preview+json
 M.create_label_mutation = [[
@@ -2417,6 +2817,11 @@ M.remove_labels_mutation = [[
     }
   }
 ]]
+
+---@class LabelWithId: Label
+---@field id string
+
+---@alias LabelsQeuryResponse GraphQLResponse<{ repository: { labels: { nodes: LabelWithId[] } } }>
 
 -- https://docs.github.com/en/graphql/reference/objects#label
 M.labels_query = [[
@@ -2465,6 +2870,8 @@ M.pull_request_labels_query = [[
   }
 ]]
 
+---@alias IssueAssigneesQueryResponse GraphQLResponse<{ repository: { issue: { assignees: { nodes: User[] } } } }>
+
 M.issue_assignees_query = [[
   query {
     repository(owner: "%s", name: "%s") {
@@ -2480,6 +2887,8 @@ M.issue_assignees_query = [[
     }
   }
 ]]
+
+---@alias PullRequestAssigneesQueryResponse GraphQLResponse<{ repository: { pullRequest: { assignees: { nodes: User[] } } } }>
 
 M.pull_request_assignees_query = [[
   query {
@@ -2553,6 +2962,25 @@ M.request_reviews_mutation = [[
   }
 ]]
 
+---@class UserProfile
+---@field login string
+---@field bio string?
+---@field company string?
+---@field followers { totalCount: integer }
+---@field following { totalCount: integer }
+---@field hovercard { contexts: { message: string } }
+---@field hasSponsorsListing boolean
+---@field isEmployee boolean
+---@field isViewer boolean
+---@field location string?
+---@field organizations { nodes: { name: string? }[] }
+---@field name string?
+---@field status { emoji: string?, message: string? }?
+---@field twitterUsername string?
+---@field websiteUrl string?
+
+---@alias UserProfileQueryResponse GraphQLResponse<{ user: UserProfile }>
+
 M.user_profile_query = [[
 query {
   user(login: "%s") {
@@ -2610,6 +3038,8 @@ query($endCursor: String) {
 }
 ]]
 
+---@alias FileContentQueryResponse GraphQLResponse<{ repository: { object: { text: string? }? } }>
+
 M.file_content_query = [[
 query {
   repository(owner: "%s", name: "%s") {
@@ -2621,6 +3051,12 @@ query {
   }
 }
 ]]
+
+---@class ReactionGroupForObject
+---@field content ReactionContent
+---@field users { nodes: { login: string }[] }
+
+---@alias ReactionsForObjectQueryResponse GraphQLResponse<{ node: { reactionGroups: ReactionGroupForObject[] } }>
 
 M.reactions_for_object_query = [[
 query {
@@ -2679,6 +3115,17 @@ query {
 }
 ]]
 
+---@class User
+---@field id string
+---@field login string
+---@field isViewer boolean?
+
+---@class Team
+---@field id string
+---@field name string
+
+---@alias UsersQueryResponse GraphQLResponse<{ search: { nodes: (User|{ id: string, login: string, teams: { totalCount: integer, nodes: Team[], pageInfo: PageInfo } })[] } }>
+
 M.users_query = [[
 query($endCursor: String) {
   search(query: "%s", type: USER, first: 100) {
@@ -2706,6 +3153,26 @@ query($endCursor: String) {
   }
 }
 ]]
+
+---@class RepositoryBase
+---@field nameWithOwner string
+---@field description string?
+---@field forkCount integer
+---@field stargazerCount integer
+---@field diskUsage integer?
+---@field createdAt string
+---@field updatedAt string
+---@field isFork boolean
+---@field parent { nameWithOwner: string }
+---@field isArchived boolean
+---@field isDisabled boolean
+---@field isPrivate boolean
+---@field isEmpty boolean
+---@field isInOrganization boolean
+---@field isSecurityPolicyEnabled boolean?
+---@field url string
+
+---@alias ReposQueryResponse GraphQLResponse<{ repositoryOwner: { repositories: { nodes: RepositoryBase } } }>
 
 M.repos_query = [[
 query($endCursor: String) {
@@ -2740,6 +3207,25 @@ query($endCursor: String) {
   }
 }
 ]]
+
+---@class Repository: RepositoryBase
+---@field id string
+---@field pushedAt string?
+---@field defaultBranchRef { name: string }
+---@field securityPolicyUrl string?
+---@field allowUpdateBranch boolean
+---@field isLocked boolean
+---@field lockReason "BILLING"|"MIGRATING"|"MOVING"|"RENAME"|"TRADE_RESTRICTION"|"TRANSFERRING_OWNERSHIP"
+---@field isMirror boolean
+---@field mirrorUrl string?
+---@field hasProjectsEnabled boolean
+---@field projectsUrl string
+---@field homepageUrl string?
+---@field primaryLanguage { name: string, color: string? }
+---@field refs { nodes: { name: string }[] }
+---@field languages { nodes: { name: string, color: string? }[] }
+
+---@alias RepositoryQueryResponse GraphQLResponse<{ repository: Repository }>
 
 M.repository_query = [[
 query {
@@ -2797,6 +3283,24 @@ query {
 }
 ]]
 
+---@class GistFile
+---@field encodedName string?
+---@field encoding string?
+---@field extension string?
+---@field name string?
+---@field size integer?
+---@field text string?
+
+---@class Gist
+---@field name string
+---@field isPublic boolean
+---@field isFork boolean
+---@field description string?
+---@field createdAt string
+---@field files GistFile[]?
+
+---@alias GistsQueryResponse GraphQLResponse<{ viewer: { gists: { nodes: Gist[], pageInfo: PageInfo } } }>
+
 M.gists_query = [[
 query($endCursor: String) {
   viewer {
@@ -2825,12 +3329,15 @@ query($endCursor: String) {
 }
 ]]
 
+---@alias CreatePrMutationResponse GraphQLResponse<{ createPullRequest: { pullRequest: PullRequest_ } }>
+
 -- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
 M.create_pr_mutation = [[
   mutation {
     createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
       pullRequest {
         id
+        isDraft
         number
         state
         title
@@ -3170,6 +3677,8 @@ M.create_pr_mutation = [[
   }
 ]]
 
+---@alias UserQueryResponse GraphQLResponse<{ user: { id: string } }>
+
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
 query {
@@ -3178,6 +3687,8 @@ query {
   }
 }
 ]]
+
+---@alias RepoLablesQueryResponse GraphQLResponse<{ repository: { labels: { nodes: { id: string, name: string }[] } } }>
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.repo_labels_query = [[

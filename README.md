@@ -100,7 +100,6 @@ require"octo".setup({
   default_remote = {"upstream", "origin"}; -- order to try remotes
   default_merge_method = "commit",         -- default merge method which should be used when calling `Octo pr merge`, could be `commit`, `rebase` or `squash`
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`
-  picker = "telescope",                    -- or "fzf-lua"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
     mappings = {                           -- mappings for the pickers

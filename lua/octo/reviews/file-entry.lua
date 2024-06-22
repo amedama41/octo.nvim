@@ -5,13 +5,12 @@ local config = require "octo.config"
 local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
-local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
 local vim = vim
 
 local M = {}
 
----@type table
+---@type table<string, integer>
 M._null_buffer = {}
 
 ---@class GitStats
@@ -21,12 +20,12 @@ M._null_buffer = {}
 
 ---@class FileEntry
 ---@field path string
----@field previous_path string
+---@field previous_path string?
 ---@field basename string
 ---@field extension string
 ---@field pull_request PullRequest
 ---@field status string
----@field patch string
+---@field patch string?
 ---@field stats GitStats
 ---@field left_binary boolean|nil
 ---@field right_binary boolean|nil
@@ -49,8 +48,18 @@ FileEntry.winopts = {
   foldlevel = 0,
 }
 
+---@class FileEntryOpt
+---@field pull_request PullRequest
+---@field path string
+---@field previous_path string?
+---@field patch string?
+---@field status "A"|"D"|"M"|"R"
+---@field stats { additions: integer, deletions: integer, changes: integer }
+---@field left_binary boolean?
+---@field right_binary boolean?
+
 ---FileEntry constructor
----@param opt table
+---@param opt FileEntryOpt
 ---@return FileEntry
 function FileEntry:new(opt)
   local pr = opt.pull_request
@@ -125,7 +134,7 @@ function FileEntry:destroy()
 end
 
 ---Get the window id for the alternative side of the provided buffer
----@param split string
+---@param split "LEFT"|"RIGHT"
 ---@return integer
 function FileEntry:get_alternative_win(split)
   if split:lower() == "left" then
@@ -133,10 +142,12 @@ function FileEntry:get_alternative_win(split)
   elseif split:lower() == "right" then
     return self.left_winid
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---Get the buffer id for the alternative side of the provided buffer
----@param split string
+---@param split "LEFT"|"RIGHT"
 ---@return integer
 function FileEntry:get_alternative_buf(split)
   if split:lower() == "left" then
@@ -144,10 +155,12 @@ function FileEntry:get_alternative_buf(split)
   elseif split:lower() == "right" then
     return self.left_bufid
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---Get the window id for the side of the provided buffer
----@param split string
+---@param split "LEFT"|"RIGHT"
 ---@return integer
 function FileEntry:get_win(split)
   if split:lower() == "left" then
@@ -155,11 +168,13 @@ function FileEntry:get_win(split)
   elseif split:lower() == "right" then
     return self.right_winid
   end
+  ---@diagnostic disable-next-line missing-return
+  assert(false, "never reach here")
 end
 
 ---Get the buffer id for the side of the provided buffer
----@param split string
----@return integer
+---@param split "LEFT"|"RIGHT"
+---@return integer?
 function FileEntry:get_buf(split)
   if split:lower() == "left" then
     return self.left_bufid
@@ -169,10 +184,12 @@ function FileEntry:get_buf(split)
 end
 
 ---Fetch file content locally or from GitHub.
+---@return boolean
 function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
@@ -181,7 +198,7 @@ function FileEntry:fetch()
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
-    left_path = self.previous_path
+    left_path = assert(self.previous_path)
   end
 
   -- fetch right version
@@ -208,7 +225,7 @@ function FileEntry:fetch()
 
   -- wait until we have both versions
   return vim.wait(conf.timeout, function()
-    return self.left_lines and self.right_lines
+    return self.left_lines and self.right_lines and true
   end)
 end
 
@@ -275,12 +292,12 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      pcall(vim.cmd, [[filetype detect]])
-      pcall(vim.cmd, [[doau BufEnter]])
-      pcall(vim.cmd, [[diffthis]])
+      pcall(vim.cmd --[[@as function]], [[filetype detect]])
+      pcall(vim.cmd --[[@as function]], [[doau BufEnter]])
+      pcall(vim.cmd --[[@as function]], [[diffthis]])
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      pcall(vim.cmd, [[exec "normal! \<c-y>"]])
+      pcall(vim.cmd --[[@as function]], [[exec "normal! \<c-y>"]])
     end)
   end
 end
@@ -324,7 +341,12 @@ end
 
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
+  local conf = config.values
   local current_review = require("octo.reviews").get_current_review()
+  if current_review == nil then
+    return
+  end
+
   local review_level = current_review:get_level()
   local splits = {
     {
@@ -339,20 +361,27 @@ function FileEntry:place_signs()
     },
   }
   for _, split in ipairs(splits) do
-    signs.unplace(split.bufnr)
     vim.api.nvim_buf_clear_namespace(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
 
     -- place comment range signs
     if split.comment_ranges then
       for _, range in ipairs(split.comment_ranges) do
-        for line = range[1], range[2] do
-          signs.place("octo_comment_range", split.bufnr, line - 1)
+        if range[1] ~= range[2] then
+          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, range[1] - 1, -1, {
+            end_row = range[2] - 1,
+            strict = false,
+            number_hl_group = "OctoGreen",
+          })
         end
       end
     end
 
     -- place thread comments signs and virtual text
+    ---@type PullRequestReviewThread[]
     local threads = vim.tbl_values(current_review.threads)
+    table.sort(threads, function(t1, t2)
+      return t1.startLine < t2.startLine
+    end)
     for _, thread in ipairs(threads) do
       local startLine, endLine = thread.startLine, thread.line
       if review_level == "COMMIT" then
@@ -360,30 +389,32 @@ function FileEntry:place_signs()
         endLine = thread.originalLine
       end
 
-      local sign = "octo_thread"
+      local sign_hl_group = "OctoBlue"
       if thread.isOutdated then
-        sign = sign .. "_outdated"
+        sign_hl_group = "OctoRed"
       elseif thread.isResolved then
-        sign = sign .. "_resolved"
+        sign_hl_group = "OctoGreen"
       end
 
-      for _, comment in ipairs(thread.comments.nodes) do
+      for _, comment in ipairs(vim.iter(thread.comments.nodes):rev():totable()) do
         if comment.state == "PENDING" then
-          sign = sign .. "_pending"
+          sign_hl_group = "OctoYellow"
         end
         if
           (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
           or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
         then
           -- for lines between startLine and endLine, place the sign
-          for line = startLine, endLine do
-            signs.place(sign, split.bufnr, line - 1)
-          end
+          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, {
+            end_row = endLine - 1,
+            strict = false,
+            sign_text = conf.comment_icon,
+            sign_hl_group = sign_hl_group,
+          })
 
           -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
-          local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-          --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
+          local vt_msg = string.format("%2d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
           local opts = {
             virt_text = { { vt_msg, "Comment" } },
             virt_text_pos = "right_align",
@@ -400,8 +431,11 @@ function FileEntry:place_signs()
   end
 end
 
+---@param opts { status: string, show_diff: boolean, path: string, split: "left"|"right", binary: boolean, lines: string[], repo: string, use_local: boolean }
+---@return integer
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
   local bufnr
   if opts.use_local then
     -- Use the file from the file system
@@ -414,18 +448,18 @@ function M._create_buffer(opts)
       string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
     elseif opts.status == "R" and not opts.show_diff then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
     elseif opts.lines then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
     end
   end
-  vim.api.nvim_buf_set_option(bufnr, "modified", false)
-  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+  vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
     path = opts.path,
     split = string.upper(opts.split),
@@ -433,11 +467,14 @@ function M._create_buffer(opts)
   return bufnr
 end
 
+---@param left_winid integer
+---@param right_winid integer
 function M.load_null_buffers(left_winid, right_winid)
   M.load_null_buffer(left_winid)
   M.load_null_buffer(right_winid)
 end
 
+---@param winid integer
 function M.load_null_buffer(winid)
   local bn = M._get_null_buffer()
   if vim.api.nvim_win_is_valid(winid) then
@@ -446,6 +483,7 @@ function M.load_null_buffer(winid)
   M._configure_buffer(bn)
 end
 
+---@return integer
 function M._get_null_buffer()
   local msg = "Loading ..."
   local bn = M._null_buffer[msg]
@@ -453,8 +491,8 @@ function M._get_null_buffer()
     local nbn = vim.api.nvim_create_buf(false, false)
     vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
     local bufname = utils.path_join { "octo", "null" }
-    vim.api.nvim_buf_set_option(nbn, "modified", false)
-    vim.api.nvim_buf_set_option(nbn, "modifiable", false)
+    vim.api.nvim_set_option_value("modified", false, { buf = nbn })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = nbn })
     local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
     if not ok then
       utils.wipe_named_buffer(bufname)
@@ -465,14 +503,17 @@ function M._get_null_buffer()
   return M._null_buffer[msg]
 end
 
+---@param left_winid integer
+---@param right_winid integer
 function M._configure_windows(left_winid, right_winid)
   for _, id in ipairs { left_winid, right_winid } do
     for k, v in pairs(FileEntry.winopts) do
-      vim.api.nvim_win_set_option(id, k, v)
+      vim.api.nvim_set_option_value(k, v, { win = id })
     end
   end
 end
 
+---@param bufid integer
 function M._configure_buffer(bufid)
   utils.apply_mappings("review_diff", bufid)
   -- local conf = config.values
@@ -482,6 +523,7 @@ function M._configure_buffer(bufid)
   -- vim.cmd(string.format("vnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
 end
 
+---@param bufid integer
 function M._detach_buffer(bufid)
   local conf = config.values
   for _, lhs in pairs(conf.mappings.review_diff) do

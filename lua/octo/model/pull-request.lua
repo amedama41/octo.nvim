@@ -9,7 +9,7 @@ local M = {}
 ---@field name string
 ---@field number integer
 ---@field id string
----@field bufnr integer
+---@field bufnr integer?
 ---@field left Rev
 ---@field right Rev
 ---@field local_right boolean
@@ -19,7 +19,17 @@ local M = {}
 local PullRequest = {}
 PullRequest.__index = PullRequest
 
+---@class PullRequestOpts
+---@field repo string
+---@field number integer
+---@field id string
+---@field left Rev
+---@field right Rev
+---@field bufnr integer?
+---@field files PullRequestChangedFile[]
+
 ---PullRequest constructor.
+---@param opts PullRequestOpts
 ---@return PullRequest
 function PullRequest:new(opts)
   local this = {
@@ -58,6 +68,7 @@ end
 M.PullRequest = PullRequest
 
 ---Fetch the diff of the PR
+---@param pr PullRequest
 function PullRequest:get_diff(pr)
   local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
   gh.run {
@@ -74,6 +85,7 @@ function PullRequest:get_diff(pr)
 end
 
 ---Fetch the changed files for a given PR
+---@param callback fun(files: FileEntry[])
 function PullRequest:get_changed_files(callback)
   local url = string.format("repos/%s/pulls/%d/files", self.repo, self.number)
   gh.run {
@@ -83,7 +95,9 @@ function PullRequest:get_changed_files(callback)
         utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
+        ---@type GithubDiffEntry[]
         local results = vim.fn.json_decode(output)
+        ---@type FileEntry[]
         local files = {}
         for _, result in ipairs(results) do
           local entry = FileEntry:new {
@@ -106,7 +120,12 @@ function PullRequest:get_changed_files(callback)
   }
 end
 
+---@class GithubCommit
+---@field files GithubDiffEntry[]
+
 ---Fetch the changed files at a given commit
+---@param rev Rev
+---@param callback fun(files: FileEntry[])
 function PullRequest:get_commit_changed_files(rev, callback)
   local url = string.format("repos/%s/commits/%s", self.repo, rev.commit)
   gh.run {
@@ -116,7 +135,9 @@ function PullRequest:get_commit_changed_files(rev, callback)
         utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
+        ---@type GithubCommit
         local results = vim.fn.json_decode(output)
+        ---@type FileEntry[]
         local files = {}
         if results.files then
           for _, result in ipairs(results.files) do

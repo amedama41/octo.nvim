@@ -7,7 +7,6 @@ local completion = require "octo.completion"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
-local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local signs = require "octo.ui.signs"
 local window = require "octo.ui.window"
@@ -15,7 +14,9 @@ local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local vim = vim
 
+---@type table<string, { number: integer, title: string }[]>
 _G.octo_repo_issues = {}
+---@type table<integer, OctoBuffer>
 _G.octo_buffers = {}
 _G.octo_colors_loaded = false
 
@@ -34,7 +35,6 @@ function M.setup(user_config)
   end
 
   signs.setup()
-  picker.setup()
   completion.setup()
   folds.setup()
   autocmds.setup()
@@ -42,6 +42,7 @@ function M.setup(user_config)
   gh.setup()
 end
 
+---@param bufnr integer?
 function M.configure_octo_buffer(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
@@ -64,6 +65,7 @@ function M.save_buffer()
   buffer:save()
 end
 
+---@param bufnr integer?
 function M.load_buffer(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local bufname = vim.fn.bufname(bufnr)
@@ -88,6 +90,10 @@ function M.load_buffer(bufnr)
   end)
 end
 
+---@param repo string
+---@param kind "pull"|"issue"|"repo"
+---@param number integer?
+---@param cb fun(obj: PullRequest_|Issue|Repository)
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
   local query, key
@@ -108,10 +114,13 @@ function M.load(repo, kind, number, cb)
         vim.api.nvim_err_writeln(stderr)
       elseif output then
         if kind == "pull" or kind == "issue" then
+          ---@type PullRequestQueryResponse|IssueQueryResponse
           local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+          ---@type PullRequest_|Issue
           local obj = resp.data.repository[key]
           cb(obj)
         elseif kind == "repo" then
+          ---@type RepositoryQueryResponse
           local resp = vim.fn.json_decode(output)
           local obj = resp.data.repository
           cb(obj)
@@ -144,11 +153,14 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
+          ---@type ReactionsForObjectQueryResponse
           local resp = vim.fn.json_decode(output)
+          ---@type table<ReactionContent, string[]>
           local reactions = {}
           local reactionGroups = resp.data.node.reactionGroups
           for _, reactionGroup in ipairs(reactionGroups) do
             local users = reactionGroup.users.nodes
+            ---@type string[]
             local logins = {}
             for _, user in ipairs(users) do
               table.insert(logins, user.login)
@@ -180,6 +192,7 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
+          ---@type UserProfileQueryResponse
           local resp = vim.fn.json_decode(output)
           local user = resp.data.user
           local popup_bufnr = vim.api.nvim_create_buf(false, true)
@@ -208,6 +221,7 @@ function M.on_cursor_hold()
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
+        ---@type IssueSummaryQueryResponse
         local resp = vim.fn.json_decode(output)
         local issue = resp.data.repository.issueOrPullRequest
         local popup_bufnr = vim.api.nvim_create_buf(false, true)
@@ -223,6 +237,10 @@ function M.on_cursor_hold()
   }
 end
 
+---@param kind "pull"|"issue"|"repo"
+---@param obj PullRequest_|Issue|Repository
+---@param repo string
+---@param create boolean
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
     utils.error("Cannot find " .. repo)

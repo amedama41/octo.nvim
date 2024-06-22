@@ -92,7 +92,7 @@ _G.Test_withfile = function(test_data, cb)
         linenr = value.linenr,
         colnr = 0,
       }
-      if not vim.tbl_islist(value.before) then
+      if not vim.islist(value.before) then
         value.before = { value.before }
       end
       for index, text in pairs(value.before) do
@@ -105,7 +105,7 @@ _G.Test_withfile = function(test_data, cb)
           end
         end
       end
-      if not vim.tbl_islist(value.after) then
+      if not vim.islist(value.after) then
         value.after = { value.after }
       end
       vim.bo.filetype = value.filetype or "text"

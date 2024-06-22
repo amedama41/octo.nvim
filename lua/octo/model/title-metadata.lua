@@ -10,7 +10,14 @@ local M = {}
 local TitleMetadata = {}
 TitleMetadata.__index = TitleMetadata
 
+---@class TitleMetadataOpts
+---@field savedBody string
+---@field body string
+---@field dirty boolean
+---@field extmark integer
+
 ---TitleMetadata constructor.
+---@param opts TitleMetadataOpts?
 ---@return TitleMetadata
 function TitleMetadata:new(opts)
   opts = opts or {}

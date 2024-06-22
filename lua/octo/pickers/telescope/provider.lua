@@ -31,6 +31,8 @@ local dropdown_opts = require("telescope.themes").get_dropdown {
   previewer = false,
 }
 
+---@param opts table<string, string>
+---@param kind "issue"|"pull_request"
 local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
@@ -61,6 +63,7 @@ local function get_filter(opts, kind)
   return filter
 end
 
+---@param command "default"|"horizontal"|"vertical"|"tab"
 local function open(command)
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
@@ -78,6 +81,8 @@ local function open(command)
   end
 end
 
+---@param command "default"|"horizontal"|"vertical"|"tab"
+---@return fun(prompt_bufnr: integer)
 local function open_preview_buffer(command)
   return function(prompt_bufnr)
     actions.close(prompt_bufnr)
@@ -96,12 +101,15 @@ local function open_preview_buffer(command)
   end
 end
 
+---@return fun(prompt_bufnr: integer)
 local function open_in_browser()
   return function(prompt_bufnr)
+    ---@type IssueEntry|RepoEntry
     local entry = action_state.get_selected_entry(prompt_bufnr)
     local number
     local repo = entry.repo
     if entry.kind ~= "repo" then
+      ---@cast entry IssueEntry
       number = entry.value
     end
     actions.close(prompt_bufnr)
@@ -121,6 +129,7 @@ end
 --
 -- ISSUES
 --
+---@param opts table<string, any>
 function M.issues(opts)
   opts = opts or {}
   if not opts.states then
@@ -146,6 +155,7 @@ function M.issues(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type IssuesQueryResponse
         local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
         local issues = resp.data.repository.issues.nodes
         if #issues == 0 then
@@ -187,6 +197,7 @@ end
 --
 -- GISTS
 --
+---@param prompt_bufnr integer
 local function open_gist(prompt_bufnr)
   local selection = action_state.get_selected_entry(prompt_bufnr)
   local gist = selection.gist
@@ -206,6 +217,7 @@ local function open_gist(prompt_bufnr)
   end
 end
 
+---@param opts table<string, any>
 function M.gists(opts)
   local privacy
   if opts.public then
@@ -222,6 +234,7 @@ function M.gists(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type GistsQueryResponse
         local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
         local gists = resp.data.viewer.gists.nodes
         opts.preview_title = opts.preview_title or ""
@@ -250,6 +263,7 @@ end
 -- PULL REQUESTS
 --
 
+---@return fun(prompt_bufnr: integer)
 local function checkout_pull_request()
   return function(prompt_bufnr)
     local sel = action_state.get_selected_entry(prompt_bufnr)
@@ -258,6 +272,7 @@ local function checkout_pull_request()
   end
 end
 
+---@return fun(prompt_bufnr: integer)
 local function merge_pull_request()
   return function(prompt_bufnr)
     local sel = action_state.get_selected_entry(prompt_bufnr)
@@ -266,6 +281,7 @@ local function merge_pull_request()
   end
 end
 
+---@param opts table<string, any>
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
@@ -292,6 +308,7 @@ function M.pull_requests(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type PullRequestsQueryResponse
         local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
         local pull_requests = resp.data.repository.pullRequests.nodes
         if #pull_requests == 0 then
@@ -332,6 +349,19 @@ function M.pull_requests(opts)
   }
 end
 
+---@class GithubPullRequestCommit
+---@field url string
+---@field sha string
+---@field node_id string
+---@field html_url string
+---@field comments_url string
+---@field commit { url: string, author: { name: string, email: string, date: string }?, commiter: { name: string, email: string, date: string }?, message: string, comment_count: integer, tree: { sha: string, url: string }, verification: { verified: boolean, reason: string, payload: string?, signature: string? }? }
+---@field authoer any
+---@field committer any
+---@field parents { sha: string, url: string, html_url: string? }[]
+---@field stats { additions: integer, deletions: integer, total: integer }?
+---@field files { sha: string, filename: string, status: string, additions: integer, deletions: integer, changes: integer, blob_url: string, raw_url: string, contents_url: string, patch: string, previous_filename: string }[]?
+
 --
 -- COMMITS
 --
@@ -349,6 +379,7 @@ function M.commits()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type GithubPullRequestCommit[]
         local results = vim.fn.json_decode(output)
         pickers
           .new({}, {
@@ -374,6 +405,7 @@ function M.commits()
   }
 end
 
+---@param callback fun(right: string, left: string)
 function M.review_commits(callback)
   local current_review = require("octo.reviews").get_current_review()
   if not current_review then
@@ -389,6 +421,7 @@ function M.review_commits(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type GithubPullRequestCommit[]
         local results = vim.fn.json_decode(output)
 
         -- add a fake entry to represent the entire pull request
@@ -422,6 +455,7 @@ function M.review_commits(callback)
             previewer = previewers.commit.new { repo = current_review.pull_request.repo },
             attach_mappings = function()
               action_set.select:replace(function(prompt_bufnr)
+                ---@type GitCommitEntry
                 local commit = action_state.get_selected_entry(prompt_bufnr)
                 local right = commit.value
                 local left = commit.parent
@@ -436,6 +470,19 @@ function M.review_commits(callback)
     end,
   }
 end
+
+---@class GithubDiffEntry
+---@field sha string
+---@field filename string
+---@field status string
+---@field additions integer
+---@field deletions integer
+---@field changes integer
+---@field blob_url string
+---@field raw_url string
+---@field contents_url string
+---@field patch string?
+---@field previous_filename string?
 
 --
 -- FILES
@@ -453,6 +500,7 @@ function M.changed_files()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type GithubDiffEntry[]
         local results = vim.fn.json_decode(output)
         pickers
           .new({}, {
@@ -481,10 +529,13 @@ end
 ---
 -- SEARCH
 ---
+---@param opts table<string, any>
 function M.search(opts)
   opts = opts or {}
   local cfg = octo_config.values
   local requester = function()
+    ---@param prompt string
+    ---@return (BriefIssue|BriefPullRequest)[]
     return function(prompt)
       if not opts.prompt and utils.is_blank(prompt) then
         return {}
@@ -504,6 +555,7 @@ function M.search(opts)
           mode = "sync",
         }
         if output then
+          ---@type SearchQueryResponse
           local resp = vim.fn.json_decode(output)
           for _, issue in ipairs(resp.data.search.nodes) do
             table.insert(results, issue)
@@ -547,6 +599,7 @@ end
 ---
 -- REVIEW COMMENTS
 ---
+---@param threads PullRequestReviewThread[]
 function M.pending_threads(threads)
   local max_linenr_length = -1
   for _, thread in ipairs(threads) do
@@ -566,6 +619,7 @@ function M.pending_threads(threads)
       previewer = previewers.review_thread.new {},
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
+          ---@type PullRequestReviewThread
           local thread = action_state.get_selected_entry(prompt_bufnr).thread
           actions.close(prompt_bufnr)
           reviews.jump_to_pending_review_thread(thread)
@@ -579,6 +633,7 @@ end
 ---
 -- PROJECTS
 ---
+---@param cb fun(id: string)
 function M.select_project_card(cb)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -601,6 +656,7 @@ function M.select_project_card(cb)
         sorter = conf.generic_sorter(opts),
         attach_mappings = function(_, _)
           actions.select_default:replace(function(prompt_bufnr)
+            ---@type ProjectCardEntry
             local source_card = action_state.get_selected_entry(prompt_bufnr)
             actions.close(prompt_bufnr)
             cb(source_card.card.id)
@@ -612,6 +668,7 @@ function M.select_project_card(cb)
   end
 end
 
+---@param cb fun(id: string)
 function M.select_target_project_column(cb)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -624,6 +681,7 @@ function M.select_target_project_column(cb)
     args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
     cb = function(output)
       if output then
+        ---@type ProjectsQueryResponse
         local resp = vim.fn.json_decode(output)
         local projects = {}
         local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
@@ -647,6 +705,7 @@ function M.select_target_project_column(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function()
               action_set.select:replace(function(prompt_bufnr)
+                ---@type ProjectEntry
                 local selected_project = action_state.get_selected_entry(prompt_bufnr)
                 actions._close(prompt_bufnr, true)
                 local opts2 = vim.deepcopy(dropdown_opts)
@@ -659,6 +718,7 @@ function M.select_target_project_column(cb)
                     sorter = conf.generic_sorter(opts2),
                     attach_mappings = function()
                       action_set.select:replace(function(prompt_bufnr2)
+                        ---@type ProjectColumnEntry
                         local selected_column = action_state.get_selected_entry(prompt_bufnr2)
                         actions.close(prompt_bufnr2)
                         cb(selected_column.column.id)
@@ -680,6 +740,7 @@ end
 --
 -- LABELS
 --
+---@param cb fun(id: string)
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -695,6 +756,7 @@ function M.select_label(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type LabelsQeuryResponse
         local resp = vim.fn.json_decode(output)
         local labels = resp.data.repository.labels.nodes
         pickers
@@ -706,6 +768,7 @@ function M.select_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
+                ---@type LabelEntry
                 local selected_label = action_state.get_selected_entry(prompt_bufnr)
                 actions.close(prompt_bufnr)
                 cb(selected_label.label.id)
@@ -719,6 +782,7 @@ function M.select_label(cb)
   }
 end
 
+---@param cb fun(id)
 function M.select_assigned_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -740,6 +804,7 @@ function M.select_assigned_label(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type LabelsQeuryResponse
         local resp = vim.fn.json_decode(output)
         local labels = resp.data.repository[key].labels.nodes
         pickers
@@ -751,6 +816,7 @@ function M.select_assigned_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
+                ---@type LabelEntry
                 local selected_label = action_state.get_selected_entry(prompt_bufnr)
                 actions.close(prompt_bufnr)
                 cb(selected_label.label.id)
@@ -767,6 +833,7 @@ end
 --
 -- ASSIGNEES
 --
+---@param cb fun(id: string)
 function M.select_user(cb)
   local opts = vim.deepcopy(dropdown_opts)
   opts.layout_config = {
@@ -787,8 +854,11 @@ function M.select_user(cb)
         mode = "sync",
       }
       if output then
+        ---@type table<string, User>
         local users = {}
+        ---@type table<string, { id: string, login: string, teams: Team[] }>
         local orgs = {}
+        ---@type UsersQueryResponse[]
         local responses = utils.get_pages(output)
         for _, resp in ipairs(responses) do
           for _, user in ipairs(resp.data.search.nodes) do
@@ -815,6 +885,7 @@ function M.select_user(cb)
           end
         end
 
+        ---@type { id: string, login: string, teams: Team[]? }[]
         local results = {}
         -- process orgs with teams
         for _, user in pairs(users) do
@@ -840,6 +911,7 @@ function M.select_user(cb)
       sorter = sorters.get_fuzzy_file(opts),
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
+          ---@type UserEntry
           local selected_user = action_state.get_selected_entry(prompt_bufnr)
           actions._close(prompt_bufnr, true)
           if not selected_user.teams then
@@ -859,6 +931,7 @@ function M.select_user(cb)
                 sorter = conf.generic_sorter(opts),
                 attach_mappings = function()
                   actions.select_default:replace(function(prompt_bufnr)
+                    ---@type TeamEntry
                     local selected_team = action_state.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
                     cb(selected_team.team.id)
@@ -878,6 +951,7 @@ end
 --
 -- ASSIGNEES
 --
+---@param cb fun(user_id: string)
 function M.select_assignee(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -899,7 +973,9 @@ function M.select_assignee(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type IssueAssigneesQueryResponse|PullRequestAssigneesQueryResponse
         local resp = vim.fn.json_decode(output)
+        ---@type User[]
         local assignees = resp.data.repository[key].assignees.nodes
         pickers
           .new(opts, {
@@ -910,6 +986,7 @@ function M.select_assignee(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
+                ---@type UserEntry
                 local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
                 actions.close(prompt_bufnr)
                 cb(selected_assignee.user.id)
@@ -926,6 +1003,7 @@ end
 --
 -- REPOS
 --
+---@param opts table<string, any>
 function M.repos(opts)
   opts = opts or {}
   local cfg = octo_config.values
@@ -945,6 +1023,7 @@ function M.repos(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type ReposQueryResponse
         local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
         local repos = resp.data.repositoryOwner.repositories.nodes
         if #repos == 0 then
@@ -987,6 +1066,7 @@ end
 --
 -- OCTO
 --
+---@param flattened_actions { object: string, name: string, fun: function }[]
 function M.actions(flattened_actions)
   local opts = {
     preview_title = "",
@@ -1003,6 +1083,7 @@ function M.actions(flattened_actions)
       sorter = conf.generic_sorter(opts),
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
+          ---@type OctoActionEntry
           local selected_command = action_state.get_selected_entry(prompt_bufnr)
           actions.close(prompt_bufnr)
           selected_command.action.fun()
@@ -1016,6 +1097,8 @@ end
 --
 -- Issue templates
 --
+---@param templates IssueTemplate[]
+---@param cb fun(template: IssueTemplate)
 function M.issue_templates(templates, cb)
   local opts = {
     preview_title = "",
@@ -1033,6 +1116,7 @@ function M.issue_templates(templates, cb)
       previewer = previewers.issue_template.new {},
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
+          ---@type IssueTemplateEntry
           local selected_template = action_state.get_selected_entry(prompt_bufnr)
           actions.close(prompt_bufnr)
           cb(selected_template.template)

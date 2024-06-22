@@ -3,7 +3,6 @@ local M = {}
 
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
 ---@alias OctoMappingsList { [string]: table}
----@alias OctoPickers "telescope" | "fzf-lua"
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean
@@ -46,8 +45,14 @@ local M = {}
 ---@class OctoMissingScopeConfig
 ---@field projects_v2 boolean
 
+---@class OctoSeparatorConfig
+---@field comment string
+---@field review string
+---@field thread string
+---@field thread_comment string
+---@field event string
+
 ---@class OctoConfig Octo configuration settings
----@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
 ---@field default_merge_method string
@@ -58,7 +63,8 @@ local M = {}
 ---@field outdated_icon string
 ---@field resolved_icon string
 ---@field timeline_marker string
----@field timeline_indent string
+---@field timeline_indent number
+---@field timeline_separators OctoSeparatorConfig
 ---@field right_bubble_delimiter string
 ---@field left_bubble_delimiter string
 ---@field github_hostname string
@@ -82,7 +88,6 @@ local M = {}
 ---@return OctoConfig
 function M.get_default_values()
   return {
-    picker = "telescope",
     picker_config = {
       use_emojis = false,
       mappings = {
@@ -101,7 +106,14 @@ function M.get_default_values()
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
     timeline_marker = " ",
-    timeline_indent = "2",
+    timeline_indent = 0,
+    timeline_separators = {
+      comment = "=",
+      review = "=",
+      thread = "-",
+      thread_comment = "- ",
+      event = " ",
+    },
     right_bubble_delimiter = "",
     left_bubble_delimiter = "",
     github_hostname = "",
@@ -228,7 +240,7 @@ function M.get_default_values()
         select_prev_entry = { lhs = "[q", desc = "move to next changed file" },
         select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
         select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
-        close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
+        close_thread = { lhs = "<C-c>", desc = "close thread panel" },
         react_hooray = { lhs = "<space>rp", desc = "add/remove 🎉 reaction" },
         react_heart = { lhs = "<space>rh", desc = "add/remove ❤️ reaction" },
         react_eyes = { lhs = "<space>re", desc = "add/remove 👀 reaction" },
@@ -253,6 +265,7 @@ function M.get_default_values()
         toggle_files = { lhs = "<leader>b", desc = "hide/show changed files panel" },
         next_thread = { lhs = "]t", desc = "move to next thread" },
         prev_thread = { lhs = "[t", desc = "move to previous thread" },
+        open_thread = { lhs = "K", desc = "open thread panel" },
         select_next_entry = { lhs = "]q", desc = "move to previous changed file" },
         select_prev_entry = { lhs = "[q", desc = "move to next changed file" },
         select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
@@ -324,20 +337,6 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    local valid_pickers = { "telescope", "fzf-lua" }
-    if not validate_type(config.picker, "picker", "string") then
-      return
-    end
-    if not vim.tbl_contains(valid_pickers, config.picker) then
-      err(
-        "picker." .. config.picker,
-        string.format(
-          "Expected a valid picker, received '%s', which is not a supported picker! Valid pickers: ",
-          config.picker,
-          table.concat(valid_pickers, ", ")
-        )
-      )
-    end
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
     end
@@ -400,7 +399,7 @@ function M.validate_config()
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")
     validate_type(config.timeline_marker, "timeline_marker", "string")
-    validate_type(config.timeline_indent, "timeline_indent", "string")
+    validate_type(config.timeline_indent, "timeline_indent", "number")
     validate_type(config.right_bubble_delimiter, "right_bubble_delimiter", "string")
     validate_type(config.left_bubble_delimiter, "left_bubble_delimiter", "string")
     validate_type(config.github_hostname, "github_hostname", "string")

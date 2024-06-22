@@ -11,7 +11,7 @@ local utils = require "octo.utils"
 ---@field repo string
 ---@field number integer
 ---@field id integer
----@field threads table[]
+---@field threads PullRequestReviewThread[]
 ---@field files FileEntry[]
 ---@field layout Layout
 ---@field pull_request PullRequest
@@ -19,6 +19,7 @@ local Review = {}
 Review.__index = Review
 
 ---Review constructor.
+---@param pull_request PullRequest
 ---@return Review
 function Review:new(pull_request)
   local this = {
@@ -32,6 +33,7 @@ function Review:new(pull_request)
 end
 
 -- Creates a new review
+---@param callback fun(resp: StartReviewMutationResponse)
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
   gh.run {
@@ -40,6 +42,7 @@ function Review:create(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type StartReviewMutationResponse
         local resp = vim.fn.json_decode(output)
         callback(resp)
       end
@@ -58,6 +61,7 @@ function Review:start()
 end
 
 -- Retrieves existing review
+---@param callback fun(resp: PendingReviewThreadsQueryResponse)
 function Review:retrieve(callback)
   local query =
     graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
@@ -67,6 +71,7 @@ function Review:retrieve(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type PendingReviewThreadsQueryResponse
         local resp = vim.fn.json_decode(output)
         callback(resp)
       end
@@ -82,8 +87,10 @@ function Review:resume()
       return
     end
 
+    local reviews = resp.data.repository.pullRequest.reviews.nodes
+    assert(reviews ~= nil)
     -- There can only be one pending review for a given user
-    for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
+    for _, review in ipairs(reviews) do
       if review.viewerDidAuthor then
         self.id = review.id
         break
@@ -95,6 +102,7 @@ function Review:resume()
       return
     end
 
+    ---@type PullRequestReviewThread[]
     local threads = resp.data.repository.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
     self:initiate()
@@ -102,6 +110,8 @@ function Review:resume()
 end
 
 -- Updates layout to focus on a single commit
+---@param right string
+---@param left string
 function Review:focus_commit(right, left)
   local pr = self.pull_request
   self.layout:close()
@@ -111,6 +121,7 @@ function Review:focus_commit(right, left)
     files = {},
   }
   self.layout:open(self)
+  ---@param files FileEntry[]
   local cb = function(files)
     -- pre-fetch the first file
     if #files > 0 then
@@ -127,6 +138,7 @@ function Review:focus_commit(right, left)
 end
 
 ---Initiates (starts/resumes) a review
+---@param opts { left: Rev, right: Rev }?
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
@@ -166,6 +178,7 @@ function Review:discard()
       if stderr and not utils.is_blank(stderr) then
         vim.error(stderr)
       elseif output then
+        ---@type PendingReviewThreadsQueryResponse
         local resp = vim.fn.json_decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
           utils.error "No pending reviews found"
@@ -196,6 +209,7 @@ function Review:discard()
   }
 end
 
+---@param threads PullRequestReviewThread[]
 function Review:update_threads(threads)
   self.threads = {}
   for _, thread in ipairs(threads) do
@@ -234,7 +248,7 @@ function Review:collect_submit_info()
     ),
   }
   vim.api.nvim_set_current_win(winid)
-  vim.api.nvim_buf_set_option(bufnr, "syntax", "octo")
+  vim.api.nvim_set_option_value("syntax", "octo", { buf = bufnr })
   utils.apply_mappings("submit_win", bufnr)
   vim.cmd [[normal G]]
 end
@@ -260,8 +274,14 @@ function Review:submit(event)
 end
 
 function Review:show_pending_comments()
+  ---@type PullRequestReviewThread[]
   local pending_threads = {}
-  for _, thread in ipairs(vim.tbl_values(self.threads)) do
+  ---@type PullRequestReviewThread[]
+  local threads = vim.tbl_values(self.threads)
+  table.sort(threads, function(t1, t2)
+    return t1.startLine < t2.startLine
+  end)
+  for _, thread in ipairs(threads) do
     for _, comment in ipairs(thread.comments.nodes) do
       if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(utils.trim(comment.body)) then
         table.insert(pending_threads, thread)
@@ -272,10 +292,11 @@ function Review:show_pending_comments()
     utils.error "No pending comments found"
     return
   else
-    require("octo.picker").pending_threads(pending_threads)
+    require("octo.pickers.telescope.provider").pending_threads(pending_threads)
   end
 end
 
+---@param isSuggestion boolean
 function Review:add_comment(isSuggestion)
   -- check if we are on the diff layout and return early if not
   local bufnr = vim.api.nvim_get_current_buf()
@@ -385,21 +406,41 @@ function Review:add_comment(isSuggestion)
 
     -- TODO: if there are threads for that line, there should be a buffer already showing them
     -- or maybe not if the user is very quick
-    local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
+    local thread_buffer = thread_panel.create_thread_buffer(1, threads, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
-      vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
-      vim.api.nvim_set_current_win(alt_win)
+      local thread_winid = self.layout.thread_winid
+      if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
+        self.layout.thread_winid = vim.api.nvim_open_win(
+          thread_buffer.bufnr, true, {
+            relative = "win",
+            win = alt_win,
+            anchor = "NW",
+            width = vim.api.nvim_win_get_width(alt_win) - 4,
+            height = vim.api.nvim_win_get_height(alt_win) - 4,
+            row = 1,
+            col = 1,
+            border = "single",
+            zindex = 3,
+          }
+        )
+        vim.wo[self.layout.thread_winid].winhighlight = vim.iter({
+          "NormalFloat:OctoThreadPanelFloat",
+          "FloatBorder:OctoThreadPanelFloatBoarder",
+          "SignColumn:OctoThreadPanelSignColumn",
+        }):join(",")
+      else
+        vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
+      end
       if isSuggestion then
         local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1 - 1, line2, false)
         local suggestion = { "```suggestion" }
         vim.list_extend(suggestion, lines)
         table.insert(suggestion, "```")
         vim.api.nvim_buf_set_lines(thread_buffer.bufnr, -3, -2, false, suggestion)
-        vim.api.nvim_buf_set_option(thread_buffer.bufnr, "modified", false)
+        vim.api.nvim_set_option_value("modified", false, { buf = thread_buffer.bufnr })
       end
       thread_buffer:configure()
-      vim.cmd [[diffoff!]]
       vim.cmd [[normal! vvGk]]
       vim.cmd [[startinsert]]
     end
@@ -408,6 +449,7 @@ function Review:add_comment(isSuggestion)
   end
 end
 
+---@return "COMMIT"|"PR"
 function Review:get_level()
   local review_level = "COMMIT"
   if
@@ -425,13 +467,21 @@ M.reviews = {}
 
 M.Review = Review
 
+---@param isSuggestion boolean
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
+  if review == nil then
+    return
+  end
   review:add_comment(isSuggestion)
 end
 
+---@param thread PullRequestReviewThread
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
+  if current_review == nil then
+    return
+  end
   for _, file in ipairs(current_review.layout.files) do
     if thread.path == file.path then
       current_review.layout:ensure_layout()
@@ -453,11 +503,13 @@ function M.jump_to_pending_review_thread(thread)
   end
 end
 
+---@return Review?
 function M.get_current_review()
   local current_tabpage = vim.api.nvim_get_current_tabpage()
   return M.reviews[tostring(current_tabpage)]
 end
 
+---@return Layout?
 function M.get_current_layout()
   local current_review = M.get_current_review()
   if current_review then

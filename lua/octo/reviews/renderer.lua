@@ -53,8 +53,8 @@ function M.render(bufid, data)
     return
   end
 
-  local was_modifiable = vim.api.nvim_buf_get_option(bufid, "modifiable")
-  vim.api.nvim_buf_set_option(bufid, "modifiable", true)
+  local was_modifiable = vim.api.nvim_get_option_value("modifiable", { buf = bufid })
+  vim.api.nvim_set_option_value("modifiable", true, { buf = bufid })
 
   vim.api.nvim_buf_set_lines(bufid, 0, -1, false, data.lines)
   vim.api.nvim_buf_clear_namespace(bufid, data.namespace, 0, -1)
@@ -62,7 +62,7 @@ function M.render(bufid, data)
     vim.api.nvim_buf_add_highlight(bufid, data.namespace, hl.group, hl.line_idx, hl.first, hl.last)
   end
 
-  vim.api.nvim_buf_set_option(bufid, "modifiable", was_modifiable)
+  vim.api.nvim_set_option_value("modifiable", was_modifiable, { buf = bufid })
 end
 
 local git_status_hl_map = {
