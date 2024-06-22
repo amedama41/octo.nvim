@@ -895,7 +895,7 @@ function M.create_pr(draft)
       if ok then
         local job = Job:new {
           command = "git",
-          args = { "push", remote, local_branch .. ":" .. remote_branch },
+          args = { "push", "--set-upstream", remote, local_branch .. ":" .. remote_branch },
           cwd = vim.fn.getcwd(),
         }
         job:sync()
