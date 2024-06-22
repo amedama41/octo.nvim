@@ -67,11 +67,17 @@ M.state_message_map = {
   REVIEW_REQUIRED = "Awaiting required review",
 }
 
+---@alias GithubDiffEntryStatus "added"|"removed"|"modified"|"renamed"|"copied"|"changed"|"unchanged"
+
+---@type { [GithubDiffEntryStatus]: string }
 M.file_status_map = {
   modified = "M",
   added = "A",
-  deleted = "D",
+  removed = "D",
   renamed = "R",
+  copied = "C",
+  changed = "T",
+  unchanged = " ",
 }
 
 ---@param str string

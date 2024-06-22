@@ -474,7 +474,7 @@ end
 ---@class GithubDiffEntry
 ---@field sha string
 ---@field filename string
----@field status string
+---@field status GithubDiffEntryStatus
 ---@field additions integer
 ---@field deletions integer
 ---@field changes integer
