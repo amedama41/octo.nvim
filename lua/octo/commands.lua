@@ -104,7 +104,7 @@ function M.setup()
       end,
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
-        picker.prs(opts)
+        picker.pull_requests(opts)
       end,
       checkout = function()
         local bufnr = vim.api.nvim_get_current_buf()
@@ -1301,7 +1301,7 @@ function M.add_project_card()
   end
 
   -- show column selection picker
-  picker.project_columns(function(column_id)
+  picker.select_target_project_column(function(column_id)
     -- add new card
     local query = graphql("add_project_card_mutation", buffer.node.id, column_id)
     gh.run {
@@ -1330,7 +1330,7 @@ function M.remove_project_card()
   end
 
   -- show card selection picker
-  picker.project_cards(function(card)
+  picker.select_project_card(function(card)
     -- delete card
     local query = graphql("delete_project_card_mutation", card)
     gh.run {
@@ -1358,9 +1358,9 @@ function M.move_project_card()
     return
   end
 
-  picker.project_cards(function(source_card)
+  picker.select_project_card(function(source_card)
     -- show project column selection picker
-    picker.project_columns(function(target_column)
+    picker.select_target_project_column(function(target_column)
       -- move card to selected column
       local query = graphql("move_project_card_mutation", source_card, target_column)
       gh.run {
@@ -1553,7 +1553,7 @@ function M.add_label(label)
       utils.error("Cannot find label: " .. label)
     end
   else
-    picker.labels(cb)
+    picker.select_label(cb)
   end
 end
 
@@ -1596,7 +1596,7 @@ function M.remove_label(label)
       utils.error("Cannot find label: " .. label)
     end
   else
-    picker.assigned_labels(cb)
+    picker.select_assigned_label(cb)
   end
 end
 
@@ -1650,7 +1650,7 @@ function M.add_user(subject, login)
       utils.error "User not found"
     end
   else
-    picker.users(cb)
+    picker.select_user(cb)
   end
 end
 
@@ -1693,7 +1693,7 @@ function M.remove_assignee(login)
       utils.error "User not found"
     end
   else
-    picker.assignees(cb)
+    picker.select_assignee(cb)
   end
 end
 
