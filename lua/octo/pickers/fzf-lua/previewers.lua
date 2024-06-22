@@ -87,7 +87,7 @@ M.issue = function(formatted_issues)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
-          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
+          vim.api.nvim_set_option_value("filetype", "octo", { buf = tmpbuf })
         end
       end,
     }
@@ -146,7 +146,7 @@ M.search = function()
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
-          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
+          vim.api.nvim_set_option_value("filetype", "octo", { buf = tmpbuf })
         end
       end,
     }
@@ -181,7 +181,7 @@ M.commit = function(formatted_commits, repo)
     vim.list_extend(lines, { "" })
 
     vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, lines)
-    vim.api.nvim_buf_set_option(tmpbuf, "filetype", "git")
+    vim.api.nvim_set_option_value("filetype", "git", { buf = tmpbuf })
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
@@ -222,7 +222,7 @@ M.changed_files = function(formatted_files)
     local diff = entry.change.patch
     if diff then
       vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(diff, "\n"))
-      vim.api.nvim_buf_set_option(tmpbuf, "filetype", "git")
+      vim.api.nvim_set_option_value("filetype", "git", { buf = tmpbuf })
     end
 
     self:set_preview_buf(tmpbuf)
@@ -358,7 +358,7 @@ M.issue_template = function(formatted_templates)
 
     if template then
       vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(template, "\n"))
-      vim.api.nvim_buf_set_option(tmpbuf, "filetype", "markdown")
+      vim.api.nvim_set_option_value("filetype", "markdown", { buf = tmpbuf })
     end
 
     self:set_preview_buf(tmpbuf)

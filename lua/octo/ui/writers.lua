@@ -179,7 +179,7 @@ function M.write_repo(bufnr, repo)
     utils.get_file_contents(repo.nameWithOwner, defaultBranchRefName, "README.md", function(lines)
       if vim.api.nvim_buf_is_valid(bufnr) then
         vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
-        vim.api.nvim_buf_set_option(bufnr, "modified", false)
+        vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
       end
     end)
   end
@@ -226,7 +226,9 @@ function M.write_state(bufnr, state, number)
       table.insert(title_vt, { "[DRAFT] ", "OctoStateDraftFloat" })
     end
   end
-  vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1, {
+    virt_text = title_vt
+  })
 end
 
 ---@param bufnr integer

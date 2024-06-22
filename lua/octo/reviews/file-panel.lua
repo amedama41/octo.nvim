@@ -107,7 +107,7 @@ function FilePanel:open()
   self.winid = vim.api.nvim_get_current_win()
 
   for k, v in pairs(FilePanel.winopts) do
-    vim.api.nvim_win_set_option(self.winid, k, v)
+    vim.api.nvim_set_option_value(k, v, { win = self.winid })
   end
 
   vim.cmd("buffer " .. self.bufid)
@@ -145,7 +145,7 @@ function FilePanel:init_buffer()
   local bn = vim.api.nvim_create_buf(false, false)
 
   for k, v in pairs(FilePanel.bufopts) do
-    vim.api.nvim_buf_set_option(bn, k, v)
+    vim.api.nvim_set_option_value(k, v, { buf = bn })
   end
 
   local bufname = "OctoChangedFiles-" .. name_counter
@@ -182,7 +182,7 @@ function FilePanel:highlight_file(file)
   for i, f in ipairs(self.files) do
     if f == file then
       pcall(vim.api.nvim_win_set_cursor, self.winid, { i + header_size, 0 })
-      vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
+      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", i + header_size - 1, 0, -1)
     end
   end
@@ -198,7 +198,7 @@ function FilePanel:highlight_prev_file()
     if f == cur then
       local line = utils.clamp(i + header_size - 1, header_size + 1, #self.files + header_size)
       pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
-      vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
+      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
   end
@@ -214,7 +214,7 @@ function FilePanel:highlight_next_file()
     if f == cur then
       local line = utils.clamp(i + header_size + 1, header_size, #self.files + header_size)
       pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
-      vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
+      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
   end

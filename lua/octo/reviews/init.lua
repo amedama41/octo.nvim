@@ -248,7 +248,7 @@ function Review:collect_submit_info()
     ),
   }
   vim.api.nvim_set_current_win(winid)
-  vim.api.nvim_buf_set_option(bufnr, "syntax", "octo")
+  vim.api.nvim_set_option_value("syntax", "octo", { buf = bufnr })
   utils.apply_mappings("submit_win", bufnr)
   vim.cmd [[normal G]]
 end
@@ -438,7 +438,7 @@ function Review:add_comment(isSuggestion)
         vim.list_extend(suggestion, lines)
         table.insert(suggestion, "```")
         vim.api.nvim_buf_set_lines(thread_buffer.bufnr, -3, -2, false, suggestion)
-        vim.api.nvim_buf_set_option(thread_buffer.bufnr, "modified", false)
+        vim.api.nvim_set_option_value("modified", false, { buf = thread_buffer.bufnr })
       end
       thread_buffer:configure()
       vim.cmd [[normal! vvGk]]

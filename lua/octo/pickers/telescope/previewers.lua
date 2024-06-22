@@ -51,7 +51,7 @@ local issue = defaulter(function(opts)
               local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
               writers.write_block(bufnr, { "", "" }, reactions_line)
               writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-              vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+              vim.api.nvim_set_option_value("filetype", "octo", { buf = bufnr })
             end
           end,
         }
@@ -114,7 +114,7 @@ local commit = defaulter(function(opts)
           bufname = self.state.bufname,
           mode = "append",
           callback = function(bufnr, _)
-            vim.api.nvim_buf_set_option(bufnr, "filetype", "diff")
+            vim.api.nvim_set_option_value("filetype", "diff", { buf = bufnr })
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
@@ -140,7 +140,7 @@ local changed_files = defaulter(function(opts)
         local diff = entry.change.patch
         if diff then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          vim.api.nvim_set_option_value("filetype", "diff", { buf = self.state.bufnr })
         end
       end
     end,
@@ -187,7 +187,7 @@ local issue_template = defaulter(function(opts)
         local template = entry.template.body
         if template then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(template, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "markdown")
+          vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.state.bufnr })
         end
       end
     end,

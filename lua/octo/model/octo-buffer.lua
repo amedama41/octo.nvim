@@ -107,7 +107,7 @@ function OctoBuffer:render_repo()
   utils.clear_history(self.bufnr)
 
   -- reset modified option
-  vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
+  vim.api.nvim_set_option_value("modified", false, { buf = self.bufnr })
 
   self.ready = true
 end
@@ -256,7 +256,7 @@ function OctoBuffer:render_issue()
   utils.clear_history(self.bufnr)
 
   -- reset modified option
-  vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
+  vim.api.nvim_set_option_value("modified", false, { buf = self.bufnr })
 
   self.ready = true
 end
@@ -270,7 +270,7 @@ function OctoBuffer:render_threads(threads)
   -- drop undo history
   utils.clear_history(self.bufnr)
 
-  vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
+  vim.api.nvim_set_option_value("modified", false, { buf = self.bufnr })
   self.ready = true
 end
 
@@ -432,7 +432,7 @@ function OctoBuffer:save()
   utils.clear_history(self.bufnr)
 
   -- reset modified option
-  vim.api.nvim_buf_set_option(bufnr, "modified", false)
+  vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
 end
 
 ---Sync issue/PR title and body with GitHub
@@ -975,7 +975,7 @@ function OctoBuffer:render_signs()
 
   -- reset modified option
   if not issue_dirty then
-    vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
+    vim.api.nvim_set_option_value("modified", false, { buf = self.bufnr })
   end
 end
 

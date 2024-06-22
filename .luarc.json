@@ -1,5 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
-  "pathStrict": true,
+  "runtime.pathStrict": true,
+  "runtime.version": "LuaJIT",
   "workspace.library": ["$VIMRUNTIME/lua"]
 }

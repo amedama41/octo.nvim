@@ -440,18 +440,18 @@ function M._create_buffer(opts)
       string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
     elseif opts.status == "R" and not opts.show_diff then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
     elseif opts.lines then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
     end
   end
-  vim.api.nvim_buf_set_option(bufnr, "modified", false)
-  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+  vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
     path = opts.path,
     split = string.upper(opts.split),
@@ -483,8 +483,8 @@ function M._get_null_buffer()
     local nbn = vim.api.nvim_create_buf(false, false)
     vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
     local bufname = utils.path_join { "octo", "null" }
-    vim.api.nvim_buf_set_option(nbn, "modified", false)
-    vim.api.nvim_buf_set_option(nbn, "modifiable", false)
+    vim.api.nvim_set_option_value("modified", false, { buf = nbn })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = nbn })
     local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
     if not ok then
       utils.wipe_named_buffer(bufname)
@@ -500,7 +500,7 @@ end
 function M._configure_windows(left_winid, right_winid)
   for _, id in ipairs { left_winid, right_winid } do
     for k, v in pairs(FileEntry.winopts) do
-      vim.api.nvim_win_set_option(id, k, v)
+      vim.api.nvim_set_option_value(k, v, { win = id })
     end
   end
 end
