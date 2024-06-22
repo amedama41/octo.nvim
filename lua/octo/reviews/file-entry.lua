@@ -366,11 +366,13 @@ function FileEntry:place_signs()
     -- place comment range signs
     if split.comment_ranges then
       for _, range in ipairs(split.comment_ranges) do
-        vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, range[1] - 1, -1, {
-          end_row = range[2] - 1,
-          strict = false,
-          number_hl_group = "OctoGreen",
-        })
+        if range[1] ~= range[2] then
+          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, range[1] - 1, -1, {
+            end_row = range[2] - 1,
+            strict = false,
+            number_hl_group = "OctoGreen",
+          })
+        end
       end
     end
 
