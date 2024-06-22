@@ -1509,6 +1509,7 @@ function M.write_virtual_text(bufnr, ns, line, chunks, separator)
   local opts = {
     virt_text = chunks,
     virt_text_pos = "overlay",
+    hl_mode = "combine",
   }
   if separator ~= nil then
     opts = vim.tbl_extend(

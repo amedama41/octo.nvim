@@ -1,5 +1,6 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local utils = require "octo.utils"
+local vim = vim
 
 local M = {}
 
@@ -151,7 +152,7 @@ function M.create_thread_buffer(index, threads, repo, number, side, path)
       repo = repo,
     }
     buffer:render_threads(threads)
-    buffer:render_signcolumn()
+    buffer:render_signs()
   elseif vim.api.nvim_buf_is_loaded(bufnr) then
     buffer = octo_buffers[bufnr]
   else
