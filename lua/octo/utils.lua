@@ -683,13 +683,15 @@ function M.get_file_contents(repo, commit, path, cb)
 end
 
 function M.set_timeout(delay, callback, ...)
-  local timer = vim.loop.new_timer()
-  local args = { ... }
-  vim.loop.timer_start(timer, delay, 0, function()
-    vim.loop.timer_stop(timer)
-    vim.loop.close(timer)
-    callback(unpack(args))
-  end)
+  local timer = vim.uv.new_timer()
+  if timer then
+    local args = { ... }
+    vim.uv.timer_start(timer, delay, 0, function()
+      vim.uv.timer_stop(timer)
+      vim.uv.close(timer)
+      callback(unpack(args))
+    end)
+  end
   return timer
 end
 
@@ -1417,7 +1419,7 @@ end
 
 --- Generates map from buffer line to diffhunk position
 ---@param diffhunk string
----@return { left_side_lines: table<string, integer>, right_side_lines: table<string, integer>, right_offset: integer, left_offset: integer>
+---@return { left_side_lines: table<string, integer>, right_side_lines: table<string, integer>, right_offset: integer, left_offset: integer }
 function M.generate_line2position_map(diffhunk)
   local map = M.generate_position2line_map(diffhunk)
   ---@type table<string, integer>, table<string, integer>
