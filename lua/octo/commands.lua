@@ -429,7 +429,7 @@ function M.octo(object, action, ...)
   end
 end
 
---- Adds a new comment to an issue/PR
+--- Adds a new comment to an issue/PR/thread
 function M.add_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -438,6 +438,7 @@ function M.add_comment()
   end
 
   local comment_kind
+  ---@type IssueComment|PullRequestReviewCommentForPRReviewThread
   local comment = {
     id = -1,
     author = { login = vim.g.octo_viewer },
@@ -447,32 +448,37 @@ function M.add_comment()
     viewerCanDelete = true,
     viewerDidAuthor = true,
     reactionGroups = {
-      { content = "THUMBS_UP", users = { totalCount = 0 } },
-      { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-      { content = "LAUGH", users = { totalCount = 0 } },
-      { content = "HOORAY", users = { totalCount = 0 } },
-      { content = "CONFUSED", users = { totalCount = 0 } },
-      { content = "HEART", users = { totalCount = 0 } },
-      { content = "ROCKET", users = { totalCount = 0 } },
-      { content = "EYES", users = { totalCount = 0 } },
+      { content = "THUMBS_UP", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "THUMBS_DOWN", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "LAUGH", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "HOORAY", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "CONFUSED", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "HEART", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "ROCKET", users = { totalCount = 0 }, viewerHasReacted = false },
+      { content = "EYES", users = { totalCount = 0 }, viewerHasReacted = false },
     },
   }
 
   local _thread = buffer:get_thread_at_cursor()
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
+    -- Adds a thread comment on thread panel
     assert(_thread)
+    ---@cast comment PullRequestReviewCommentForPRReviewThread
     comment_kind = "PullRequestReviewComment"
     comment.pullRequestReview = { id = reviews.get_current_review().id }
     comment.state = "PENDING"
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif not utils.is_blank(_thread) and not buffer:isReviewThread() then
+    -- Adds a thread comment on PR view
     assert(_thread)
+    ---@cast comment PullRequestReviewCommentForPRReviewThread
     comment_kind = "PullRequestComment"
-    comment.state = ""
+    comment.state = "SUBMITTED"
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
+    -- Adds a regular comment on PR or issue view
     comment_kind = "IssueComment"
   elseif utils.is_blank(_thread) and buffer:isReviewThread() then
     utils.error "Error adding a comment to a review thread"

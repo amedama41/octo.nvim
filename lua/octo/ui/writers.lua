@@ -534,7 +534,7 @@ function M.write_details(bufnr, issue, update)
 end
 
 ---@param bufnr integer
----@param comment PullRequestReview|PullRequestReviewCommentForPRReviewThread|PullRequestReviewCommentForPRReview|IssueComment
+---@param comment PullRequestReview|PullRequestReviewCommentForPRReviewThread|IssueComment
 ---@param kind "PullRequestReview"|"PullRequestReviewComment"|"PullRequestComment"|"IssueComment"
 ---@param line integer?
 ---@return integer
@@ -580,11 +580,9 @@ function M.write_comment(bufnr, comment, kind, line)
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.review, 240), "OctoTimelineSeparator.Review" }
-  elseif kind == "PullRequestReviewComment" then
-    ---@class comment PullRequestReviewCommentForPRReviewThread
+  elseif kind == "PullRequestReviewComment" or kind == "PullRequestComment" then
+    ---@cast comment PullRequestReviewCommentForPRReviewThread
     -- Review thread comments
-    local state_bubble =
-      bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
     table.insert(
       header_vt,
       { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker.ThreadComment" }
@@ -592,6 +590,8 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { "THREAD COMMENT: ", "OctoTimelineItemHeading.ThreadComment" })
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     if comment.state ~= "SUBMITTED" then
+    local state_bubble =
+      bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
       vim.list_extend(header_vt, state_bubble)
     end
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
@@ -599,20 +599,6 @@ function M.write_comment(bufnr, comment, kind, line)
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.thread_comment, 240), "OctoTimelineSeparator.ThreadComment" }
-  elseif kind == "PullRequestComment" then
-    ---@cast comment PullRequestReviewCommentForPRReview
-    -- Regular comment for a review thread comments
-    table.insert(
-      header_vt,
-      { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker.Comment" }
-    )
-    table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading.Comment" })
-    table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
-    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
-    if not comment.viewerCanUpdate then
-      table.insert(header_vt, { " ", "OctoRed" })
-    end
-    separator = { string.rep(conf.timeline_separators.comment, 240), "OctoTimelineSeparator.Comment" }
   elseif kind == "IssueComment" then
     ---@cast comment IssueComment
     -- Issue comments

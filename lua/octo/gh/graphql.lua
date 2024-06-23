@@ -1216,7 +1216,7 @@ M.update_pull_request_mutation = [[
 ---@field assignees { nodes: { id: string, login: string, isViewer: boolean }[] }
 ---@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { login: string, isViewer: boolean } }[] }
 
----@alias UpdatePullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueComment|UpdatePullRequestReview
+---@alias UpdatePullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueCommentWithTypename|UpdatePullRequestReview
 ---
 ---@class UpdatePullRequest: PullRequestBase
 ---@field mergedBy { login: string }
@@ -1787,17 +1787,18 @@ query($endCursor: String) {
 ---@field author { login: string }?
 ---@field viewerDidAuthor boolean
 
----@class IssueComment: IssueBase
----@field __typename "IssueComment"
+---@class IssueComment: IssueCommentBase
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
+
+---@class IssueCommentWithTypename: IssueComment
+---@field __typename "IssueComment"
 
 ---@class PageInfo
 ---@field hasNextPage boolean
 ---@field endCursor string?
 
 ---@class PullRequestReview
----@field __typename "PullRequestReview"
 ---@field id string
 ---@field body string
 ---@field createdAt string
@@ -1809,7 +1810,10 @@ query($endCursor: String) {
 ---@field state PullRequestReviewState
 ---@field comments { totalCount: integer, nodes: PullRequestReviewCommentForPRReview[] }
 
----@alias PullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueComment|PullRequestReview
+---@class PullRequestReviewWithTypename: PullRequestReview
+---@field __typename "PullRequestReview"
+
+---@alias PullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueCommentWithTypename|PullRequestReviewWithTypename
 
 ---@class PullRequest_: PullRequestBase
 ---@field isDraft boolean
@@ -2178,7 +2182,7 @@ query($endCursor: String) {
 ]]
 
 ---@alias IssueState "CLOSED"|"OPEN"
----@alias IssueTimelineItems LabeledEvent|UnlabeledEvent|IssueComment|ClosedEvent|ReopenedEvent|AssignedEvent
+---@alias IssueTimelineItems LabeledEvent|UnlabeledEvent|IssueCommentWithTypename|ClosedEvent|ReopenedEvent|AssignedEvent
 
 ---@class Issue: IssueBase
 ---@field viewerDidAuthor boolean

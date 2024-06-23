@@ -170,7 +170,7 @@ function OctoBuffer:render_issue()
     end
 
     if item.__typename == "IssueComment" then
-      ---@cast item IssueComment
+      ---@cast item IssueCommentWithTypename
       if prev_is_event then
         writers.write_block(self.bufnr, { "" })
       end
@@ -180,7 +180,7 @@ function OctoBuffer:render_issue()
       folds.create(self.bufnr, start_line + 1, end_line, true)
       prev_is_event = false
     elseif item.__typename == "PullRequestReview" then
-      ---@cast item PullRequestReview
+      ---@cast item PullRequestReviewWithTypename
       if prev_is_event then
         writers.write_block(self.bufnr, { "" })
       end
