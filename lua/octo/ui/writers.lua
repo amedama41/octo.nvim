@@ -1476,9 +1476,14 @@ function M.write_threads(bufnr, threads)
           commit = comment.originalCommit.abbreviatedOid,
         })
 
-        -- write snippet
-        thread_start, thread_end =
-          M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+        if thread.subjectType == "LINE" then
+          -- write snippet
+          thread_start, thread_end =
+            M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+        else
+          thread_start = vim.api.nvim_buf_line_count(bufnr) + 1
+          thread_end = vim.api.nvim_buf_line_count(bufnr) + 1
+        end
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")

@@ -192,6 +192,7 @@ M.start_review_mutation = [[
               resolvedBy { login }
               isCollapsed
               isOutdated
+              subjectType
               comments(first:100) {
                 nodes {
                   id
@@ -611,6 +612,7 @@ M.add_pull_request_review_comment_mutation = [[
               isResolved
               isCollapsed
               isOutdated
+              subjectType
               comments(first:100) {
                 nodes {
                   id
@@ -1542,6 +1544,7 @@ M.update_pull_request_state_mutation = [[
 ---@field resolvedBy { login: string }?
 ---@field isCollapsed boolean
 ---@field isOutdated boolean
+---@field subjectType "LINE"|"FILE"
 ---@field comments { nodes: PullRequestReviewCommentForPRReviewThread[] }
 
 ---@class BriefPullRequestReview
@@ -1577,6 +1580,7 @@ query {
           resolvedBy { login }
           isCollapsed
           isOutdated
+          subjectType
           comments(first:100) {
             nodes {
               id
@@ -2105,6 +2109,7 @@ query($endCursor: String) {
           startLine
           originalStartLine
           diffSide
+          subjectType
           comments(first: 100) {
             nodes{
               id
@@ -3610,6 +3615,7 @@ M.create_pr_mutation = [[
             startLine
             originalStartLine
             diffSide
+            subjectType
             comments(first: 100) {
               nodes{
                 id
