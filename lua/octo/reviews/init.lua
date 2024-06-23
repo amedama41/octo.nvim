@@ -362,6 +362,7 @@ function Review:add_comment(isSuggestion)
       commit = self.layout.right.commit
       commit_abbrev = self.layout.right:abbrev()
     end
+    ---@type PullRequestReviewThread[]
     local threads = {
       {
         originalStartLine = line1,
@@ -370,12 +371,14 @@ function Review:add_comment(isSuggestion)
         isOutdated = false,
         isResolved = false,
         diffSide = split,
+        startDiffSide = split,
         isCollapsed = false,
         id = -1,
         comments = {
           nodes = {
             {
               id = -1,
+              path = file.path,
               author = { login = vim.g.octo_viewer },
               state = "PENDING",
               replyTo = vim.NIL,
@@ -389,14 +392,14 @@ function Review:add_comment(isSuggestion)
               viewerDidAuthor = true,
               pullRequestReview = { id = self.id },
               reactionGroups = {
-                { content = "THUMBS_UP", users = { totalCount = 0 } },
-                { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-                { content = "LAUGH", users = { totalCount = 0 } },
-                { content = "HOORAY", users = { totalCount = 0 } },
-                { content = "CONFUSED", users = { totalCount = 0 } },
-                { content = "HEART", users = { totalCount = 0 } },
-                { content = "ROCKET", users = { totalCount = 0 } },
-                { content = "EYES", users = { totalCount = 0 } },
+                { content = "THUMBS_UP", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "THUMBS_DOWN", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "LAUGH", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "HOORAY", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "CONFUSED", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "HEART", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "ROCKET", users = { totalCount = 0 }, viewerHasReacted = false },
+                { content = "EYES", users = { totalCount = 0 }, viewerHasReacted = false },
               },
             },
           },

@@ -1497,7 +1497,7 @@ function M.write_threads(bufnr, threads)
     buffer.threadsMetadata[tostring(thread_mark_id)] = ThreadMetadata:new {
       threadId = thread.id,
       replyTo = thread.comments.nodes[1].id,
-      replyToRest = assert(utils.extract_rest_id(thread.comments.nodes[1].url)),
+      replyToRest = utils.extract_rest_id(thread.comments.nodes[1].url),
       reviewId = thread.comments.nodes[1].pullRequestReview.id,
       path = thread.path,
       line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,

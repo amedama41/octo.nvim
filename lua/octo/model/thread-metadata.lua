@@ -3,7 +3,7 @@ local M = {}
 ---@class ThreadMetadata
 ---@field threadId string
 ---@field replyTo string
----@field replyToRest string
+---@field replyToRest string?
 ---@field reviewId string
 ---@field path string
 ---@field line number
@@ -15,7 +15,7 @@ ThreadMetadata.__index = ThreadMetadata
 ---@class ThreadMetadataOpts
 ---@field threadId string
 ---@field replyTo string
----@field replyToRest string
+---@field replyToRest string?
 ---@field reviewId string
 ---@field path string
 ---@field line integer
