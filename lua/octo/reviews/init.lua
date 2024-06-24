@@ -296,8 +296,8 @@ function Review:show_pending_comments()
   end
 end
 
----@param isSuggestion boolean
-function Review:add_comment(isSuggestion)
+---@param is_suggestion boolean
+function Review:add_comment(is_suggestion)
   -- check if we are on the diff layout and return early if not
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
@@ -313,13 +313,11 @@ function Review:add_comment(isSuggestion)
   -- get visual selected line range
   local line1, line2 = utils.get_lines_from_context "visual"
 
-  local comment_ranges, current_bufnr
+  local comment_ranges
   if split == "RIGHT" then
     comment_ranges = file.right_comment_ranges
-    current_bufnr = file.right_bufid
   elseif split == "LEFT" then
     comment_ranges = file.left_comment_ranges
-    current_bufnr = file.left_bufid
   else
     return
   end
@@ -348,7 +346,36 @@ function Review:add_comment(isSuggestion)
 
   self.layout:ensure_layout()
 
-  local alt_win = file:get_alternative_win(split)
+  self:show_new_thread_panel(file, "LINE", split, line1, line2, diff_hunk, is_suggestion)
+end
+
+function Review:add_file_comment()
+  -- check if we are on the diff layout and return early if not
+  self.layout:ensure_layout()
+
+  local file = self.layout.file_panel:get_file_at_cursor()
+  if not file then
+    return
+  end
+
+  self:show_new_thread_panel(file, "FILE", "RIGHT", 1, 1, "", false)
+end
+
+---@private
+---@param file FileEntry
+---@param subjectType PullRequestReviewThreadSubjectType
+---@param split DiffSide
+---@param line1 integer
+---@param line2 integer
+---@param diff_hunk string
+---@param is_suggestion boolean
+function Review:show_new_thread_panel(file, subjectType, split, line1, line2, diff_hunk, is_suggestion)
+  local cur_file = self.layout:cur_file()
+  if not cur_file then
+    return
+  end
+
+  local alt_win = cur_file:get_alternative_win(split)
   if vim.api.nvim_win_is_valid(alt_win) then
     local pr = file.pull_request
 
@@ -374,11 +401,13 @@ function Review:add_comment(isSuggestion)
         startDiffSide = split,
         isCollapsed = false,
         id = -1,
+        subjectType = subjectType,
         comments = {
           nodes = {
             {
               id = -1,
               path = file.path,
+              subjectType = subjectType,
               author = { login = vim.g.octo_viewer },
               state = "PENDING",
               replyTo = vim.NIL,
@@ -435,7 +464,13 @@ function Review:add_comment(isSuggestion)
       else
         vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
       end
-      if isSuggestion then
+      if is_suggestion then
+        local current_bufnr
+        if split == "RIGHT" then
+          current_bufnr = file.right_bufid
+        elseif split == "LEFT" then
+          current_bufnr = file.left_bufid
+        end
         local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1 - 1, line2, false)
         local suggestion = { "```suggestion" }
         vim.list_extend(suggestion, lines)
@@ -470,13 +505,17 @@ M.reviews = {}
 
 M.Review = Review
 
----@param isSuggestion boolean
-function M.add_review_comment(isSuggestion)
+---@param is_suggestion boolean
+function M.add_review_comment(is_suggestion)
   local review = M.get_current_review()
   if review == nil then
     return
   end
-  review:add_comment(isSuggestion)
+  if review.layout.file_panel:is_focused() then
+    review:add_file_comment()
+  else
+    review:add_comment(is_suggestion)
+  end
 end
 
 ---@param thread PullRequestReviewThread

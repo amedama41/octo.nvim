@@ -277,6 +277,7 @@ function M.get_default_values()
       file_panel = {
         submit_review = { lhs = "<leader>vs", desc = "submit review" },
         discard_review = { lhs = "<leader>vd", desc = "discard review" },
+        add_review_comment = { lhs = "<space>ca", desc = "add a new review comment" },
         next_entry = { lhs = "j", desc = "move to next changed file" },
         prev_entry = { lhs = "k", desc = "move to previous changed file" },
         select_entry = { lhs = "<cr>", desc = "show selected changed file diffs" },

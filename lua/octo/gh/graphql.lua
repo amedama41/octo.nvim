@@ -217,6 +217,7 @@ M.start_review_mutation = [[
                     state
                   }
                   path
+                  subjectType
                   reactionGroups {
                     content
                     viewerHasReacted
@@ -292,7 +293,7 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_thread_mutation = [[
 mutation {
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) {
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", subjectType: %s, side: %s, line:%d}) {
     thread {
       id
       comments(last:100) {
@@ -637,6 +638,7 @@ M.add_pull_request_review_comment_mutation = [[
                     state
                   }
                   path
+                  subjectType
                   reactionGroups {
                     content
                     viewerHasReacted
@@ -1515,6 +1517,7 @@ M.update_pull_request_state_mutation = [[
 ---@alias PullRequestReviewCommentState "PENDING"|"SUBMITTED"
 ---@alias CommentAuthorAssociation "COLLABORATOR"|"CONTRIBUTOR"|"FIRST_TIMER"|"FIRST_TIME_CONTRIBUTOR"|"MANNEQUIN"|"MEMBER"|"NONE"|"OWNER"
 ---@alias DiffSide "LEFT"|"RIGHT"
+---@alias PullRequestReviewThreadSubjectType "FILE"|"LINE"
 
 ---@class PullRequestReviewComment: PullRequestReviewCommentBase
 ---@field createdAt string
@@ -1524,6 +1527,7 @@ M.update_pull_request_state_mutation = [[
 ---@field originalCommit { oid: string, abbreviatedOid: string }?
 ---@field pullRequestReview { id: string, state: PullRequestReviewState }
 ---@field path string
+---@field subjectType PullRequestReviewThreadSubjectType
 
 ---@class PullRequestReviewCommentForPRReview: PullRequestReviewComment
 ---@field commit { oid: string, abbreviatedOid: string }?
@@ -1544,7 +1548,7 @@ M.update_pull_request_state_mutation = [[
 ---@field resolvedBy { login: string }?
 ---@field isCollapsed boolean
 ---@field isOutdated boolean
----@field subjectType "LINE"|"FILE"
+---@field subjectType PullRequestReviewThreadSubjectType
 ---@field comments { nodes: PullRequestReviewCommentForPRReviewThread[] }
 
 ---@class BriefPullRequestReview
@@ -1605,6 +1609,7 @@ query {
                 state
               }
               path
+              subjectType
               reactionGroups {
                 content
                 viewerHasReacted
@@ -2132,6 +2137,7 @@ query($endCursor: String) {
                 state
               }
               path
+              subjectType
               author { login }
               authorAssociation
               viewerDidAuthor
@@ -3638,6 +3644,7 @@ M.create_pr_mutation = [[
                   state
                 }
                 path
+                subjectType
                 author { login }
                 authorAssociation
                 viewerDidAuthor

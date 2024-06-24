@@ -164,6 +164,7 @@ function FilePanel:init_buffer()
   return bn
 end
 
+---@return FileEntry|nil
 function FilePanel:get_file_at_cursor()
   if not (self:is_open() and self:buf_loaded()) then
     return

@@ -20,6 +20,7 @@ local M = {}
 ---@field replyToRest string?
 ---@field reviewId string?
 ---@field path string?
+---@field subjectType PullRequestReviewThreadSubjectType?
 ---@field diffSide string?
 ---@field snippetStartLine integer?
 ---@field snippetEndLine integer?
@@ -46,6 +47,7 @@ CommentMetadata.__index = CommentMetadata
 ---@field replyToRest string?
 ---@field reviewId string?
 ---@field path string?
+---@field subjectType PullRequestReviewThreadSubjectType?
 ---@field diffSide DiffSide?
 ---@field snippetStartLine integer?
 ---@field snippetEndLine integer?
@@ -72,6 +74,7 @@ function CommentMetadata:new(opts)
     replyToRest = opts.replyToRest,
     reviewId = opts.reviewId,
     path = opts.path,
+    subjectType = opts.subjectType,
     diffSide = opts.diffSide,
     startLine = opts.startLine,
     endLine = opts.endLine,

@@ -665,6 +665,7 @@ function M.write_comment(bufnr, comment, kind, line)
       replyToRest = comment.replyToRest,
       reviewId = comment.pullRequestReview and comment.pullRequestReview.id,
       path = comment.path,
+      subjectType = comment.subjectType,
       diffSide = comment.diffSide,
       snippetStartLine = comment.start_line,
       snippetEndLine = comment.end_line,

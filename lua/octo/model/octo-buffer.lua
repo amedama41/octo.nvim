@@ -643,6 +643,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         comment_metadata.reviewId,
         comment_metadata.body,
         comment_metadata.path,
+        comment_metadata.subjectType,
         comment_metadata.diffSide,
         comment_metadata.snippetStartLine
       )

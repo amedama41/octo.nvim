@@ -253,8 +253,12 @@ function M.setup()
     comment = {
       add = function()
         local current_review = require("octo.reviews").get_current_review()
-        if current_review and utils.in_diff_window() then
-          current_review:add_comment(false)
+        if current_review then
+          if utils.in_diff_window() then
+            current_review:add_comment(false)
+          elseif current_review.layout.file_panel:is_focused() then
+            current_review:add_file_comment()
+          end
         else
           M.add_comment()
         end
