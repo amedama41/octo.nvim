@@ -109,6 +109,46 @@ function M.setup()
   }):start()
 end
 
+---@param opts { args: string[], hostname: string?, headers: string[]? }
+---@return string
+---@return string[]
+function M.make_command(opts)
+  local remote_hostname = require("octo.utils").get_remote_host()
+
+  -- Lazy load viewer name on the first gh command
+  if not vim.g.octo_viewer then
+    vim.g.octo_viewer = M.get_user_name(remote_hostname)
+  end
+
+  opts = opts or {}
+  local args = {}
+  vim.list_extend(args, opts.args)
+  local conf = config.values
+  local hostname = ""
+  if args[1] == "api" then
+    table.insert(args, "-H")
+    table.insert(args, "Accept: " .. table.concat(headers, ";"))
+    if not require("octo.utils").is_blank(opts.hostname) then
+      hostname = opts.hostname
+    elseif not require("octo.utils").is_blank(conf.github_hostname) then
+      hostname = conf.github_hostname
+    elseif not require("octo.utils").is_blank(remote_hostname) then
+      hostname = remote_hostname
+    end
+    if not require("octo.utils").is_blank(hostname) and hostname ~= "github.com" then
+      table.insert(args, "--hostname")
+      table.insert(args, hostname)
+    end
+  end
+  if opts.headers then
+    for _, header in ipairs(opts.headers) do
+      table.insert(args, "-H")
+      table.insert(args, header)
+    end
+  end
+  return config.values.gh_cmd, args
+end
+
 ---@param opts { mode: "sync"|"async"?, args: string[], hostname: string?, headers: string[]?, stream_cb: fun(data: string, err: string), cb: fun(output: string, stderr: string) }
 ---@return string?
 ---@return string?
@@ -123,35 +163,14 @@ function M.run(opts)
     vim.g.octo_viewer = M.get_user_name(remote_hostname)
   end
 
-  opts = opts or {}
-  local conf = config.values
   local mode = opts.mode or "async"
-  local hostname = ""
-  if opts.args[1] == "api" then
-    table.insert(opts.args, "-H")
-    table.insert(opts.args, "Accept: " .. table.concat(headers, ";"))
-    if not require("octo.utils").is_blank(opts.hostname) then
-      hostname = opts.hostname
-    elseif not require("octo.utils").is_blank(conf.github_hostname) then
-      hostname = conf.github_hostname
-    elseif not require("octo.utils").is_blank(remote_hostname) then
-      hostname = remote_hostname
-    end
-    if not require("octo.utils").is_blank(hostname) and hostname ~= "github.com" then
-      table.insert(opts.args, "--hostname")
-      table.insert(opts.args, hostname)
-    end
-  end
-  if opts.headers then
-    for _, header in ipairs(opts.headers) do
-      table.insert(opts.args, "-H")
-      table.insert(opts.args, header)
-    end
-  end
+  opts = opts or {}
+  local command, args = M.make_command(opts)
+
   local job = Job:new {
     enable_recording = true,
-    command = config.values.gh_cmd,
-    args = opts.args,
+    command = command,
+    args = args,
     on_stdout = vim.schedule_wrap(function(err, data, _)
       if mode == "async" and opts.stream_cb then
         opts.stream_cb(data, err)

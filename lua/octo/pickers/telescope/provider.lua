@@ -843,73 +843,34 @@ function M.select_user(owner, repository, cb)
     height = 15,
   }
 
-  --local queue = {}
-  local function get_user_requester()
-    return function(prompt)
-      -- skip empty queries
-      if not prompt or prompt == "" or utils.is_blank(prompt) then
-        return {}
-      end
-      local query = graphql("users_query", owner, repository, prompt)
-      local output = gh.run {
-        args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-        mode = "sync",
-      }
-      if output then
-        ---@type table<string, User>
-        local users = {}
-        ---@type table<string, { id: string, login: string, teams: Team[] }>
-        local orgs = {}
-        ---@type UsersQueryResponse[]
-        local responses = utils.get_pages(output)
-        for _, resp in ipairs(responses) do
-          for _, user in ipairs(resp.data.repository.assignableUsers.nodes) do
-            if not user.teams then
-              -- regular user
-              if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
-                users[user.login] = {
-                  id = user.id,
-                  login = user.login,
-                }
-              end
-            elseif user.teams and user.teams.totalCount > 0 then
-              -- organization, collect all teams
-              if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-                orgs[user.login] = {
-                  id = user.id,
-                  login = user.login,
-                  teams = user.teams.nodes,
-                }
-              else
-                vim.list_extend(orgs[user.login].teams, user.teams.nodes)
-              end
-            end
-          end
-        end
-
-        ---@type { id: string, login: string, teams: Team[]? }[]
-        local results = {}
-        -- process orgs with teams
-        for _, user in pairs(users) do
-          table.insert(results, user)
-        end
-        for _, org in pairs(orgs) do
-          org.login = string.format("%s (%d)", org.login, #org.teams)
-          table.insert(results, org)
-        end
-        return results
-      else
-        return {}
-      end
+  local function make_command_list()
+    local query = graphql("users_query", owner, repository, "")
+    local command, args = gh.make_command({
+      args = {
+        "api", "graphql",
+        "--paginate",
+        "-f", string.format("query=%s", query),
+        "--jq", ".data.repository.assignableUsers.nodes.[]",
+      },
+    })
+    local command_list = { command }
+    vim.list_extend(command_list, args)
+    return command_list
+  end
+  local function make_entry_marker()
+    local from_user = entry_maker.gen_from_user()
+    return function(line)
+      ---@type { id: string, login: string, teams: Team? }
+      local user = vim.fn.json_decode(line)
+      return from_user(user)
     end
   end
 
   pickers
     .new(opts, {
-      finder = finders.new_dynamic {
-        entry_maker = entry_maker.gen_from_user(),
-        fn = get_user_requester(),
-      },
+      finder = finders.new_oneshot_job(make_command_list(), {
+        entry_maker = make_entry_marker(),
+      }),
       sorter = sorters.get_fuzzy_file(opts),
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
