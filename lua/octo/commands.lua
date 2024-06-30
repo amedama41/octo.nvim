@@ -1619,6 +1619,12 @@ function M.add_user(subject, login)
     utils.error "No Octo buffer"
     return
   end
+  local repo = buffer.repo
+  if not repo then
+    utils.error "No repo for Octo buffer"
+    return
+  end
+  local owner, name = utils.split_repo(repo)
 
   local iid = buffer.node.id
   if not iid then
@@ -1660,7 +1666,7 @@ function M.add_user(subject, login)
       utils.error "User not found"
     end
   else
-    picker.select_user(cb)
+    picker.select_user(owner, name, cb)
   end
 end
 

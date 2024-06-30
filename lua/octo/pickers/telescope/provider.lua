@@ -833,8 +833,10 @@ end
 --
 -- ASSIGNEES
 --
+---@param owner string
+---@param repository string
 ---@param cb fun(id: string)
-function M.select_user(cb)
+function M.select_user(owner, repository, cb)
   local opts = vim.deepcopy(dropdown_opts)
   opts.layout_config = {
     width = 0.4,
@@ -848,7 +850,7 @@ function M.select_user(cb)
       if not prompt or prompt == "" or utils.is_blank(prompt) then
         return {}
       end
-      local query = graphql("users_query", prompt)
+      local query = graphql("users_query", owner, repository, prompt)
       local output = gh.run {
         args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
         mode = "sync",
@@ -861,7 +863,7 @@ function M.select_user(cb)
         ---@type UsersQueryResponse[]
         local responses = utils.get_pages(output)
         for _, resp in ipairs(responses) do
-          for _, user in ipairs(resp.data.search.nodes) do
+          for _, user in ipairs(resp.data.repository.assignableUsers.nodes) do
             if not user.teams then
               -- regular user
               if not vim.tbl_contains(vim.tbl_keys(users), user.login) then

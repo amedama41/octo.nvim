@@ -3139,30 +3139,19 @@ query {
 ---@field id string
 ---@field name string
 
----@alias UsersQueryResponse GraphQLResponse<{ search: { nodes: (User|{ id: string, login: string, teams: { totalCount: integer, nodes: Team[], pageInfo: PageInfo } })[] } }>
+---@alias UsersQueryResponse GraphQLResponse<{ repository: { assignableUsers: { nodes: User[] } } }>
 
 M.users_query = [[
 query($endCursor: String) {
-  search(query: "%s", type: USER, first: 100) {
-    nodes {
-      ... on User {
+  repository(owner: "%s", name: "%s") {
+    assignableUsers(query: "%s", first: 100, after: $endCursor) {
+      nodes {
         id
         login
       }
-      ... on Organization {
-        id
-        login
-        teams(first:100, after: $endCursor) {
-          totalCount
-          nodes {
-            id
-            name
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-        }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
