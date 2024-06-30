@@ -844,7 +844,7 @@ function M.select_user(owner, repository, cb)
   }
 
   local function make_command_list()
-    local query = graphql("users_query", owner, repository, "")
+    local query = graphql("users_query", owner, repository)
     local command, args = gh.make_command({
       args = {
         "api", "graphql",

@@ -3144,7 +3144,7 @@ query {
 M.users_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
-    assignableUsers(query: "%s", first: 100, after: $endCursor) {
+    assignableUsers(first: 100, after: $endCursor) {
       nodes {
         id
         login
