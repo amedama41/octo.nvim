@@ -648,7 +648,7 @@ function M.write_comment(bufnr, comment, kind, line)
   table.insert(
     comments_metadata,
     CommentMetadata:new {
-      author = comment.author ~= vim.NIL and comment.author.name or "",
+      author = comment.author ~= vim.NIL and comment.author.login or "",
       id = comment.id,
       dirty = false,
       savedBody = comment_body,
