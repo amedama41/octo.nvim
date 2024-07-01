@@ -96,7 +96,10 @@ function PullRequest:get_changed_files(callback)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
         ---@type GithubDiffEntry[]
-        local results = vim.fn.json_decode(output)
+        local results = {}
+        for _, line in ipairs(vim.split(output, '\n')) do
+          vim.list_extend(results, vim.json.decode(line))
+        end
         ---@type FileEntry[]
         local files = {}
         for _, result in ipairs(results) do
