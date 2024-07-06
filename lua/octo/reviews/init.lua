@@ -443,24 +443,24 @@ function Review:show_new_thread_panel(file, subjectType, split, line1, line2, di
       table.insert(file.associated_bufs, thread_buffer.bufnr)
       local thread_winid = self.layout.thread_winid
       if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
-        self.layout.thread_winid = vim.api.nvim_open_win(
-          thread_buffer.bufnr, true, {
-            relative = "win",
-            win = alt_win,
-            anchor = "NW",
-            width = vim.api.nvim_win_get_width(alt_win) - 4,
-            height = vim.api.nvim_win_get_height(alt_win) - 4,
-            row = 1,
-            col = 1,
-            border = "single",
-            zindex = 3,
-          }
-        )
-        vim.wo[self.layout.thread_winid].winhighlight = vim.iter({
-          "NormalFloat:OctoThreadPanelFloat",
-          "FloatBorder:OctoThreadPanelFloatBoarder",
-          "SignColumn:OctoThreadPanelSignColumn",
-        }):join(",")
+        self.layout.thread_winid = vim.api.nvim_open_win(thread_buffer.bufnr, true, {
+          relative = "win",
+          win = alt_win,
+          anchor = "NW",
+          width = vim.api.nvim_win_get_width(alt_win) - 4,
+          height = vim.api.nvim_win_get_height(alt_win) - 4,
+          row = 1,
+          col = 1,
+          border = "single",
+          zindex = 3,
+        })
+        vim.wo[self.layout.thread_winid].winhighlight = vim
+          .iter({
+            "NormalFloat:OctoThreadPanelFloat",
+            "FloatBorder:OctoThreadPanelFloatBoarder",
+            "SignColumn:OctoThreadPanelSignColumn",
+          })
+          :join ","
       else
         vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
       end

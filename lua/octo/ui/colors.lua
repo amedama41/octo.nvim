@@ -156,8 +156,8 @@ function M.setup()
     vim.cmd("hi def link Octo" .. from .. " " .. to)
   end
 
-  for _, type in pairs({ "Review", "Thread", "ThreadComment", "Comment", "Event" }) do
-    for _, group in pairs({ "TimelineItemHeading", "TimelineMarker", "TimelineSeparator" }) do
+  for _, type in pairs { "Review", "Thread", "ThreadComment", "Comment", "Event" } do
+    for _, group in pairs { "TimelineItemHeading", "TimelineMarker", "TimelineSeparator" } do
       vim.cmd("hi def link Octo" .. group .. "." .. type .. " Octo" .. group)
     end
   end

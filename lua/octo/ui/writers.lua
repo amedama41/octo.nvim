@@ -228,7 +228,7 @@ function M.write_state(bufnr, state, number)
     end
   end
   vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1, {
-    virt_text = title_vt
+    virt_text = title_vt,
   })
 end
 
@@ -591,8 +591,8 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { "THREAD COMMENT: ", "OctoTimelineItemHeading.ThreadComment" })
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     if comment.state ~= "SUBMITTED" then
-    local state_bubble =
-      bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
+      local state_bubble =
+        bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
       vim.list_extend(header_vt, state_bubble)
     end
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
@@ -1512,14 +1512,11 @@ function M.write_virtual_text(bufnr, ns, line, chunks, separator)
     hl_mode = "combine",
   }
   if separator ~= nil then
-    opts = vim.tbl_extend(
-      "keep", opts,
-      {
-        virt_lines = { { separator } },
-        virt_lines_above = true,
-        virt_lines_leftcol = true,
-      }
-    )
+    opts = vim.tbl_extend("keep", opts, {
+      virt_lines = { { separator } },
+      virt_lines_above = true,
+      virt_lines_leftcol = true,
+    })
   end
   pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, opts)
 end

@@ -3065,7 +3065,6 @@ query($endCursor: String) {
 ---@field refs { nodes: { name: string }[] }
 ---@field languages { nodes: { name: string, color: string? }[] }
 
-
 ---@alias RepositoryQueryResponse GraphQLResponse<{ repository: Repository }>
 
 M.repository_query = [[

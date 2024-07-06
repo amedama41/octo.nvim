@@ -854,14 +854,17 @@ function M.select_user(owner, repository, cb)
 
   local function make_command_list()
     local query = graphql("users_query", owner, repository)
-    local command, args = gh.make_command({
+    local command, args = gh.make_command {
       args = {
-        "api", "graphql",
+        "api",
+        "graphql",
         "--paginate",
-        "-f", string.format("query=%s", query),
-        "--jq", ".data.repository.assignableUsers.nodes.[]",
+        "-f",
+        string.format("query=%s", query),
+        "--jq",
+        ".data.repository.assignableUsers.nodes.[]",
       },
-    })
+    }
     local command_list = { command }
     vim.list_extend(command_list, args)
     return command_list

@@ -75,24 +75,24 @@ function M.show_review_threads()
       table.insert(file.associated_bufs, thread_buffer.bufnr)
       local thread_winid = review.layout.thread_winid
       if thread_winid == -1 or not vim.api.nvim_win_is_valid(thread_winid) then
-        review.layout.thread_winid = vim.api.nvim_open_win(
-          thread_buffer.bufnr, true, {
-            relative = "win",
-            win = alt_win,
-            anchor = "NW",
-            width = vim.api.nvim_win_get_width(alt_win) - 4,
-            height = vim.api.nvim_win_get_height(alt_win) - 4,
-            row = 1,
-            col = 1,
-            border = "single",
-            zindex = 3,
-          }
-        )
-        vim.wo[review.layout.thread_winid].winhighlight = vim.iter({
-          "NormalFloat:OctoThreadPanelFloat",
-          "FloatBorder:OctoThreadPanelFloatBoarder",
-          "SignColumn:OctoThreadPanelSignColumn",
-        }):join(",")
+        review.layout.thread_winid = vim.api.nvim_open_win(thread_buffer.bufnr, true, {
+          relative = "win",
+          win = alt_win,
+          anchor = "NW",
+          width = vim.api.nvim_win_get_width(alt_win) - 4,
+          height = vim.api.nvim_win_get_height(alt_win) - 4,
+          row = 1,
+          col = 1,
+          border = "single",
+          zindex = 3,
+        })
+        vim.wo[review.layout.thread_winid].winhighlight = vim
+          .iter({
+            "NormalFloat:OctoThreadPanelFloat",
+            "FloatBorder:OctoThreadPanelFloatBoarder",
+            "SignColumn:OctoThreadPanelSignColumn",
+          })
+          :join ","
       else
         vim.api.nvim_win_set_buf(thread_winid, thread_buffer.bufnr)
         vim.api.nvim_set_current_win(thread_winid)
@@ -139,7 +139,8 @@ function M.create_thread_buffer(index, threads, repo, number, side, path)
   if not vim.startswith(path, "/") then
     path = "/" .. path
   end
-  local line = threads[index].originalStartLine ~= vim.NIL and threads[index].originalStartLine or threads[index].originalLine
+  local line = threads[index].originalStartLine ~= vim.NIL and threads[index].originalStartLine
+    or threads[index].originalLine
   local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
   local bufnr = vim.fn.bufnr(bufname)
   local buffer

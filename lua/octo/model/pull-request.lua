@@ -97,7 +97,7 @@ function OctoPullRequest:get_changed_files(callback)
         local FileEntry = require("octo.reviews.file-entry").FileEntry
         ---@type GithubDiffEntry[]
         local results = {}
-        for _, line in ipairs(vim.split(output, '\n')) do
+        for _, line in ipairs(vim.split(output, "\n")) do
           vim.list_extend(results, vim.json.decode(line))
         end
         ---@type FileEntry[]
