@@ -654,10 +654,11 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          -- TODO type
-          local resp = vim.fn.json_decode(output).data.addPullRequestReviewThread
-          if not utils.is_blank(resp.thread) then
-            local new_comment = resp.thread.comments.nodes[1]
+          ---@type AddPullRequestReviewThreadMutationResponse
+          local resp = vim.fn.json_decode(output)
+          local obj = resp.data.addPullRequestReviewThread
+          if not utils.is_blank(obj.thread) then
+            local new_comment = obj.thread.comments.nodes[1]
             if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
               local comments = self.commentsMetadata
               for i, c in ipairs(comments) do
@@ -668,7 +669,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
                   break
                 end
               end
-              local threads = resp.thread.pullRequest.reviewThreads.nodes
+              local threads = obj.thread.pullRequest.reviewThreads.nodes
               if review then
                 review:update_threads(threads)
               end
@@ -752,7 +753,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
           if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
-            -- TODO type
+            ---@type AddPullRequestReviewCommitThreadMutationResponse
             local r = vim.fn.json_decode(output)
             local resp = r.data.addPullRequestReviewComment
             if not utils.is_blank(resp.comment) then
@@ -853,8 +854,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        -- TODO type
-        ---@type UpdateIssueCommentMutationResponse|any|UpdatePullRequestReviewMutationResponse
+        ---@type UpdateIssueCommentMutationResponse|UpdatePullRequestReviewCommentMutationResponse|UpdatePullRequestReviewMutationResponse
         local resp = vim.fn.json_decode(output)
         local resp_comment
         if comment_metadata.kind == "IssueComment" then

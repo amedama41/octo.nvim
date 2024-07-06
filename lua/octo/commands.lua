@@ -535,6 +535,7 @@ function M.delete_comment()
       cb = function(output)
         -- TODO: deleting the last review thread comment, it deletes the whole thread and review
         -- In issue buffers, we should hide the thread snippet
+        ---@type any|DeletePullRequestReviewCommentMutationResponse
         local resp = vim.fn.json_decode(output)
 
         -- remove comment lines from the buffer
@@ -558,6 +559,7 @@ function M.delete_comment()
         end
 
         if comment.kind == "PullRequestReviewComment" then
+          ---@cast resp DeletePullRequestReviewCommentMutationResponse
           local review = reviews.get_current_review()
           if not review then
             utils.error "Cannot find review for this comment"
@@ -613,7 +615,7 @@ function M.delete_comment()
 end
 
 ---@param bufnr integer
----@param thread any TODO
+---@param thread ResolveReviewThread
 ---@param thread_id string
 ---@param thread_line integer?
 local function update_review_thread_header(bufnr, thread, thread_id, thread_line)
@@ -659,7 +661,7 @@ function M.resolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        -- TODO type
+        ---@type ResolveReviewThreadMutationResponse
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
@@ -690,7 +692,7 @@ function M.unresolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        -- TODO type
+        ---@type UnresolveReviewThreadMutationResponse
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
