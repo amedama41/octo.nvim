@@ -233,7 +233,7 @@ function M.write_state(bufnr, state, number)
 end
 
 ---@param bufnr integer
----@param issue Issue|PullRequest_
+---@param issue Issue|PullRequestWithReviewThreads
 ---@param line integer?
 function M.write_body(bufnr, issue, line)
   local body = utils.trim(issue.body)
@@ -284,7 +284,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
 end
 
 ---@param bufnr integer
----@param issue IssueBase|PullRequestBase
+---@param issue IssueBase|PullRequest
 ---@param update boolean?
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
@@ -409,6 +409,7 @@ function M.write_details(bufnr, issue, update)
 
   -- additional details for pull requests
   if issue.commits then
+    ---@cast issue PullRequest
     -- reviewers
     local reviewers = {}
     local collect_reviewer = function(name, state)

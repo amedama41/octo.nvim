@@ -23,7 +23,7 @@ M._null_buffer = {}
 ---@field previous_path string?
 ---@field basename string
 ---@field extension string
----@field pull_request PullRequest
+---@field pull_request OctoPullRequest
 ---@field status string
 ---@field patch string?
 ---@field stats GitStats
@@ -49,7 +49,7 @@ FileEntry.winopts = {
 }
 
 ---@class FileEntryOpt
----@field pull_request PullRequest
+---@field pull_request OctoPullRequest
 ---@field path string
 ---@field previous_path string?
 ---@field patch string?

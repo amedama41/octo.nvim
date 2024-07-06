@@ -14,12 +14,12 @@ local utils = require "octo.utils"
 ---@field threads PullRequestReviewThread[]
 ---@field files FileEntry[]
 ---@field layout Layout
----@field pull_request PullRequest
+---@field pull_request OctoPullRequest
 local Review = {}
 Review.__index = Review
 
 ---Review constructor.
----@param pull_request PullRequest
+---@param pull_request OctoPullRequest
 ---@return Review
 function Review:new(pull_request)
   local this = {

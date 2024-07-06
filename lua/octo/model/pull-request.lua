@@ -3,7 +3,7 @@ local gh = require "octo.gh"
 
 local M = {}
 
----@class PullRequest
+---@class OctoPullRequest
 ---@field repo string
 ---@field owner string
 ---@field name string
@@ -16,8 +16,8 @@ local M = {}
 ---@field local_left boolean
 ---@field files table
 ---@field diff string
-local PullRequest = {}
-PullRequest.__index = PullRequest
+local OctoPullRequest = {}
+OctoPullRequest.__index = OctoPullRequest
 
 ---@class PullRequestOpts
 ---@field repo string
@@ -30,8 +30,8 @@ PullRequest.__index = PullRequest
 
 ---PullRequest constructor.
 ---@param opts PullRequestOpts
----@return PullRequest
-function PullRequest:new(opts)
+---@return OctoPullRequest
+function OctoPullRequest:new(opts)
   local this = {
     -- TODO: rename to nwo
     repo = opts.repo,
@@ -65,11 +65,11 @@ function PullRequest:new(opts)
   return this
 end
 
-M.PullRequest = PullRequest
+M.PullRequest = OctoPullRequest
 
 ---Fetch the diff of the PR
----@param pr PullRequest
-function PullRequest:get_diff(pr)
+---@param pr OctoPullRequest
+function OctoPullRequest:get_diff(pr)
   local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
   gh.run {
     args = { "api", "--paginate", url },
@@ -86,7 +86,7 @@ end
 
 ---Fetch the changed files for a given PR
 ---@param callback fun(files: FileEntry[])
-function PullRequest:get_changed_files(callback)
+function OctoPullRequest:get_changed_files(callback)
   local url = string.format("repos/%s/pulls/%d/files", self.repo, self.number)
   gh.run {
     args = { "api", "--paginate", url, "--jq", "." },
@@ -129,7 +129,7 @@ end
 ---Fetch the changed files at a given commit
 ---@param rev Rev
 ---@param callback fun(files: FileEntry[])
-function PullRequest:get_commit_changed_files(rev, callback)
+function OctoPullRequest:get_commit_changed_files(rev, callback)
   local url = string.format("repos/%s/commits/%s", self.repo, rev.commit)
   gh.run {
     args = { "api", "--paginate", url, "--jq", "." },

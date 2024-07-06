@@ -93,7 +93,7 @@ end
 ---@param repo string
 ---@param kind "pull"|"issue"|"repo"
 ---@param number integer?
----@param cb fun(obj: PullRequest_|Issue|Repository)
+---@param cb fun(obj: PullRequestWithReviewThreads|Issue|Repository)
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
   local query, key
@@ -116,7 +116,7 @@ function M.load(repo, kind, number, cb)
         if kind == "pull" or kind == "issue" then
           ---@type PullRequestQueryResponse|IssueQueryResponse
           local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-          ---@type PullRequest_|Issue
+          ---@type PullRequestWithReviewThreads|Issue
           local obj = resp.data.repository[key]
           cb(obj)
         elseif kind == "repo" then
@@ -238,7 +238,7 @@ function M.on_cursor_hold()
 end
 
 ---@param kind "pull"|"issue"|"repo"
----@param obj PullRequest_|Issue|Repository
+---@param obj PullRequestWithReviewThreads|Issue|Repository
 ---@param repo string
 ---@param create boolean
 function M.create_buffer(kind, obj, repo, create)

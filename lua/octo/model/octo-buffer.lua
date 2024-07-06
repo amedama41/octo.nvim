@@ -22,7 +22,7 @@ local M = {}
 ---@field bodyMetadata BodyMetadata
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
----@field node PullRequest_|Issue|Repository?
+---@field node PullRequestWithReviewThreads|Issue|Repository?
 ---@field taggable_users string[]?
 ---@field owner string?
 ---@field name string?
@@ -33,7 +33,7 @@ OctoBuffer.__index = OctoBuffer
 ---@field bufnr integer
 ---@field number integer?
 ---@field repo string?
----@field node PullRequest_|Issue|Repository?
+---@field node PullRequestWithReviewThreads|Issue|Repository?
 ---@field commentsMetadata CommentMetadata[]?
 ---@field threadsMetadata ThreadMetadata[]?
 
@@ -118,7 +118,7 @@ end
 function OctoBuffer:render_issue()
   self:clear()
   local node = self.node
-  ---@cast node Issue|PullRequest_
+  ---@cast node Issue|PullRequestWithReviewThreads
 
   -- write title
   writers.write_title(self.bufnr, node.title, 1)
@@ -1007,7 +1007,7 @@ function OctoBuffer:isRepo()
 end
 
 ---Gets the PR object for the current octo buffer
----@return PullRequest?
+---@return OctoPullRequest?
 function OctoBuffer:get_pr()
   if not self:isPullRequest() then
     utils.error "Not in a PR buffer"

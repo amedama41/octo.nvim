@@ -1156,41 +1156,9 @@ M.update_pull_request_mutation = [[
   }
 ]]
 
----@class PullRequestReviewCommentBase
+---@class PullRequest
 ---@field id string
----@field body string
----@field diffHunk string
----@field author { login: string }?
----@field authorAssociation CommentAuthorAssociation
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field viewerCanDelete boolean
----@field state PullRequestReviewCommentState
----@field url string
----@field replyTo { id: string, url: string }?
----@field reactionGroups ReactionGroup[]?
-
----@class UpdatePullRequestReviewComment: PullRequestReviewCommentBase
----@field commit { oid: string, abbreviatedOid: string }?
----@field originalPosition integer
----@field position integer?
----@field outdated boolean
-
----@class UpdatePullRequestReview
----@field __typename "PullRequestReview"
----@field id string
----@field body string
----@field createdAt string
----@field viewerCanUpdate boolean
----@field viewerCanDelete boolean
----@field reactionGroups ReactionGroup[]?
----@field author { login: string }?
----@field viewerDidAuthor boolean
----@field state PullRequestReviewState
----@field comments { totalCount: integer, nodes: UpdatePullRequestReviewComment[] }
-
----@class PullRequestBase
----@field id string
+---@field isDraft boolean
 ---@field number integer
 ---@field state PullRequestState
 ---@field title string
@@ -1199,8 +1167,10 @@ M.update_pull_request_mutation = [[
 ---@field closedAt string?
 ---@field updatedAt string
 ---@field url string
+---@field repository { nameWithOwner: string }
 ---@field files { nodes: PullRequestChangedFile[] }
 ---@field merged boolean
+---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }?
 ---@field participants { nodes: { login: string }[] }
 ---@field additions integer
 ---@field deletions integer
@@ -1213,18 +1183,17 @@ M.update_pull_request_mutation = [[
 ---@field baseRepository { name: string, nameWithOwner: string }
 ---@field milestone { title: string, state: MilestoneState }?
 ---@field author { login: string }?
+---@field viewerDidAuthor boolean
+---@field viewerCanUpdate boolean
 ---@field reactionGroups ReactionGroup[]?
+---@field projectCards { nodes: ProjectCard[] }
+---@field reviewDecision PullRequestReviewDecision
+---@field timelineItems { pageInfo: PageInfo, nodes: PullRequestTimelineItems[] }
 ---@field labels { nodes: Label[] }?
 ---@field assignees { nodes: { id: string, login: string, isViewer: boolean }[] }
----@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { login: string, isViewer: boolean } }[] }
+---@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { login: string, isViewer: boolean }|{ name: string } }[] }
 
----@alias UpdatePullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueCommentWithTypename|UpdatePullRequestReview
----
----@class UpdatePullRequest: PullRequestBase
----@field mergedBy { login: string }
----@field timelineItems { pageInfo: PageInfo?, nodes: UpdatePullRequestTimelineItems[] }
-
----@alias UpdatePullRequestStateMutationResponse GraphQLResponse<{ updatePullRequest: { pullRequest: UpdatePullRequest } }>
+---@alias UpdatePullRequestStateMutationResponse GraphQLResponse<{ updatePullRequest: { pullRequest: PullRequest } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_state_mutation = [[
@@ -1232,6 +1201,7 @@ M.update_pull_request_state_mutation = [[
     updatePullRequest(input: {pullRequestId: "%s", state: %s}) {
       pullRequest {
         id
+        isDraft
         number
         state
         title
@@ -1240,6 +1210,7 @@ M.update_pull_request_state_mutation = [[
         closedAt
         updatedAt
         url
+        repository { nameWithOwner }
         files(first:100) {
           nodes {
             path
@@ -1248,7 +1219,13 @@ M.update_pull_request_state_mutation = [[
         }
         merged
         mergedBy {
-          login
+          ... on Organization { name }
+          ... on Bot { login }
+          ... on User {
+            login
+            isViewer
+          }
+          ... on Mannequin { login }
         }
         participants(first:10) {
           nodes {
@@ -1276,6 +1253,8 @@ M.update_pull_request_state_mutation = [[
         author {
           login
         }
+        viewerDidAuthor
+        viewerCanUpdate
         reactionGroups {
           content
           viewerHasReacted
@@ -1283,167 +1262,21 @@ M.update_pull_request_state_mutation = [[
             totalCount
           }
         }
-        comments(first: 100) {
+        projectCards(last: 20) {
           nodes {
             id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
+            state
+            column {
+              name
             }
-            author {
-              login
+            project {
+              name
             }
-            viewerDidAuthor
-          }
-        }
-        labels(first: 20) {
-          nodes {
-            color
-            name
-          }
-        }
-        assignees(first: 20) {
-          nodes {
-            id
-            login
-            isViewer
           }
         }
         timelineItems(last: 100) {
           nodes {
             __typename
-            ... on LabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on UnlabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
-            ... on PullRequestCommit {
-              commit {
-                messageHeadline
-                committedDate
-                oid
-                abbreviatedOid
-                changedFiles
-                additions
-                deletions
-                committer {
-                  user {
-                    login
-                  }
-                }
-              }
-            }
-            ... on MergedEvent {
-              createdAt
-              actor {
-                login
-              }
-              commit {
-                oid
-                abbreviatedOid
-              }
-              mergeRefName
-            }
-            ... on ClosedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReopenedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReviewRequestedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewRequestRemovedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewDismissedEvent {
-              createdAt
-              actor {
-                login
-              }
-              dismissalMessage
-            }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
             ... on PullRequestReview {
               id
               body
@@ -1474,6 +1307,8 @@ M.update_pull_request_state_mutation = [[
                     abbreviatedOid
                   }
                   author { login }
+                  createdAt
+                  lastEditedAt
                   authorAssociation
                   viewerDidAuthor
                   viewerCanUpdate
@@ -1493,6 +1328,20 @@ M.update_pull_request_state_mutation = [[
                 }
               }
             }
+          }
+        }
+        reviewDecision
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
+        }
+        assignees(first: 20) {
+          nodes {
+            id
+            login
+            isViewer
           }
         }
         reviewRequests(first: 20) {
@@ -1519,9 +1368,21 @@ M.update_pull_request_state_mutation = [[
 ---@alias DiffSide "LEFT"|"RIGHT"
 ---@alias PullRequestReviewThreadSubjectType "FILE"|"LINE"
 
----@class PullRequestReviewComment: PullRequestReviewCommentBase
+---@class PullRequestReviewComment
+---@field id string
+---@field body string
+---@field diffHunk string
+---@field author { login: string }?
 ---@field createdAt string
 ---@field lastEditedAt string?
+---@field authorAssociation CommentAuthorAssociation
+---@field viewerDidAuthor boolean
+---@field viewerCanUpdate boolean
+---@field viewerCanDelete boolean
+---@field state PullRequestReviewCommentState
+---@field url string
+---@field replyTo { id: string, url: string }?
+---@field reactionGroups ReactionGroup[]?
 
 ---@class PullRequestReviewCommentForPRReviewThread: PullRequestReviewComment
 ---@field originalCommit { oid: string, abbreviatedOid: string }?
@@ -1820,18 +1681,10 @@ query($endCursor: String) {
 
 ---@alias PullRequestTimelineItems LabeledEvent|UnlabeledEvent|AssignedEvent|PullRequestCommit|MergedEvent|ClosedEvent|ReopenedEvent|ReviewRequestedEvent|ReviewRequestedRemovedEvent|ReviewDismissedEvent|IssueCommentWithTypename|PullRequestReviewWithTypename
 
----@class PullRequest_: PullRequestBase
----@field isDraft boolean
----@field repository { nameWithOwner: string }
----@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }?
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field projectCards { nodes: ProjectCard[] }
----@field timelineItems { pageInfo: PageInfo, nodes: PullRequestTimelineItems[] }
----@field reviewDecision PullRequestReviewDecision
+---@class PullRequestWithReviewThreads: PullRequest
 ---@field reviewThreads { nodes: PullRequestReviewThread[] }
 
----@alias PullRequestQueryResponse GraphQLResponse<{ repository: { pullRequest: PullRequest_ } }>
+---@alias PullRequestQueryResponse GraphQLResponse<{ repository: { pullRequest: PullRequestWithReviewThreads } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.pull_request_query = [[
@@ -3325,7 +3178,7 @@ query($endCursor: String) {
 }
 ]]
 
----@alias CreatePrMutationResponse GraphQLResponse<{ createPullRequest: { pullRequest: PullRequest_ } }>
+---@alias CreatePrMutationResponse GraphQLResponse<{ createPullRequest: { pullRequest: PullRequestWithReviewThreads } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
 M.create_pr_mutation = [[

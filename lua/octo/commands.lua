@@ -1342,7 +1342,7 @@ function M.add_project_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
             buffer.node.projectCards = obj.projectCards
@@ -1371,7 +1371,7 @@ function M.remove_project_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             buffer.node.projectCards = obj.projectCards
             writers.write_details(bufnr, obj, true)
@@ -1401,7 +1401,7 @@ function M.move_project_card()
             utils.error(stderr)
           elseif output then
             -- refresh issue/pr details
-            ---@param obj Issue|PullRequest_
+            ---@param obj Issue|PullRequestWithReviewThreads
             require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
               buffer.node.projectCards = obj.projectCards
               writers.write_details(bufnr, obj, true)
@@ -1446,7 +1446,7 @@ function M.set_project_v2_card()
               elseif update_output then
                 -- TODO do update here
                 -- refresh issue/pr details
-                ---@param obj Issue|PullRequest_
+                ---@param obj Issue|PullRequestWithReviewThreads
                 require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
                   writers.write_details(bufnr, obj, true)
                   buffer.node.projectCards = obj.projectCards
@@ -1478,7 +1478,7 @@ function M.remove_project_v2_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             buffer.node.projectCards = obj.projectCards
             writers.write_details(bufnr, obj, true)
@@ -1537,7 +1537,7 @@ function M.create_label(label)
         utils.info("Created label: " .. label.name)
 
         -- refresh issue/pr details
-        ---@param obj Issue|PullRequest_
+        ---@param obj Issue|PullRequestWithReviewThreads
         require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
           writers.write_details(bufnr, obj, true)
         end)
@@ -1568,7 +1568,7 @@ function M.add_label(label)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
           end)
@@ -1610,7 +1610,7 @@ function M.remove_label(label)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
           end)
@@ -1670,7 +1670,7 @@ function M.add_user(subject, login)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
             vim.cmd [[stopinsert]]
@@ -1714,7 +1714,7 @@ function M.remove_assignee(login)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          ---@param obj Issue|PullRequest_
+          ---@param obj Issue|PullRequestWithReviewThreads
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
           end)

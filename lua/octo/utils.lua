@@ -1227,7 +1227,7 @@ function M.error(msg)
   vim.notify(msg, vim.log.levels.ERROR, { title = "Octo.nvim" })
 end
 
----@param cb fun(pull_request: PullRequest)
+---@param cb fun(pull_request: OctoPullRequest)
 function M.get_pull_request_for_current_branch(cb)
   gh.run {
     args = { "pr", "view", "--json", "id,number,headRepositoryOwner,headRepository,isCrossRepository,url" },
