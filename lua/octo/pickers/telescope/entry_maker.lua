@@ -472,17 +472,16 @@ function M.gen_from_user()
 end
 
 ---@class RepoEntry
----@field filename string
 ---@field kind "repo"
 ---@field value string
 ---@field ordinal string
 ---@field display fun(entry: RepoEntry)
----@field repo RepositoryBase
+---@field repo BriefRepository
 
 ---@param max_nameWithOwner integer
 ---@param max_forkCount integer
 ---@param max_stargazerCount integer
----@return fun(repo: RepositoryBase?): RepoEntry?
+---@return fun(repo: BriefRepository?): RepoEntry?
 function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
   ---@param entry RepoEntry
   local make_display = function(entry)
@@ -538,7 +537,6 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
     end
 
     return {
-      filename = utils.get_repo_uri(_, repo),
       kind = "repo",
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,

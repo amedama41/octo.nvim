@@ -66,6 +66,7 @@ end
 ---@param command "default"|"horizontal"|"vertical"|"tab"
 local function open(command)
   return function(prompt_bufnr)
+    ---@type IssueEntry|RepoEntry
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
     if command == "default" then

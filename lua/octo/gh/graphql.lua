@@ -3158,49 +3158,28 @@ query($endCursor: String) {
 }
 ]]
 
----@class RepositoryBase
+---@class BriefRepository
 ---@field nameWithOwner string
 ---@field description string?
 ---@field forkCount integer
 ---@field stargazerCount integer
----@field diskUsage integer?
----@field createdAt string
----@field updatedAt string
 ---@field isFork boolean
----@field parent { nameWithOwner: string }
----@field isArchived boolean
----@field isDisabled boolean
 ---@field isPrivate boolean
----@field isEmpty boolean
----@field isInOrganization boolean
----@field isSecurityPolicyEnabled boolean?
 ---@field url string
 
----@alias ReposQueryResponse GraphQLResponse<{ repositoryOwner: { repositories: { nodes: RepositoryBase } } }>
+---@alias ReposQueryResponse GraphQLResponse<{ repositoryOwner: { repositories: { nodes: BriefRepository } } }>
 
 M.repos_query = [[
 query($endCursor: String) {
   repositoryOwner(login: "%s") {
     repositories(first: 10, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
       nodes {
-        createdAt
-        description
-        diskUsage
-        forkCount
-        isArchived
-        isDisabled
-        isEmpty
-        isFork
-        isInOrganization
-        isPrivate
-        isSecurityPolicyEnabled
-        name
         nameWithOwner
-        parent {
-          nameWithOwner
-        }
+        description
+        forkCount
         stargazerCount
-        updatedAt
+        isFork
+        isPrivate
         url
       }
       pageInfo {
@@ -3212,12 +3191,27 @@ query($endCursor: String) {
 }
 ]]
 
----@class Repository: RepositoryBase
+---@class Repository
 ---@field id string
+---@field nameWithOwner string
+---@field description string?
+---@field forkCount integer
+---@field stargazerCount integer
+---@field diskUsage integer?
+---@field createdAt string
+---@field updatedAt string
 ---@field pushedAt string?
+---@field isFork boolean
 ---@field defaultBranchRef { name: string }
+---@field parent { nameWithOwner: string }
+---@field isArchived boolean
+---@field isDisabled boolean
+---@field isPrivate boolean
+---@field isEmpty boolean
+---@field isInOrganization boolean
+---@field isSecurityPolicyEnabled boolean?
 ---@field securityPolicyUrl string?
----@field allowUpdateBranch boolean
+---@field url string
 ---@field isLocked boolean
 ---@field lockReason "BILLING"|"MIGRATING"|"MOVING"|"RENAME"|"TRADE_RESTRICTION"|"TRANSFERRING_OWNERSHIP"
 ---@field isMirror boolean
@@ -3228,6 +3222,7 @@ query($endCursor: String) {
 ---@field primaryLanguage { name: string, color: string? }
 ---@field refs { nodes: { name: string }[] }
 ---@field languages { nodes: { name: string, color: string? }[] }
+
 
 ---@alias RepositoryQueryResponse GraphQLResponse<{ repository: Repository }>
 
@@ -3257,9 +3252,6 @@ query {
     isInOrganization
     isSecurityPolicyEnabled
     securityPolicyUrl
-    defaultBranchRef {
-      name
-    }
     url
     isLocked
     lockReason

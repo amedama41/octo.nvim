@@ -24,7 +24,7 @@ function M.open_in_browser_raw(url)
 end
 
 ---@param kind "issue"|"pull_request"|"repo"|"gist"?
----@param repo string|RepositoryBase?
+---@param repo string|BriefRepository?
 ---@param number integer?
 function M.open_in_browser(kind, repo, number)
   local cmd
@@ -52,7 +52,7 @@ function M.open_in_browser(kind, repo, number)
     elseif kind == "issue" then
       cmd = string.format("gh issue view --web -R %s/%s %d", remote, repo, number)
     elseif kind == "repo" then
-      ---@cast repo RepositoryBase
+      ---@cast repo BriefRepository
       cmd = string.format("gh repo view --web %s", repo.url)
     elseif kind == "gist" then
       cmd = string.format("gh gist view --web %s", number)
