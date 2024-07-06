@@ -120,8 +120,16 @@ end
 
 local function copy_url()
   return function(prompt_bufnr)
+    ---@type IssueEntry|RepoEntry
     local entry = action_state.get_selected_entry(prompt_bufnr)
-    local url = entry.obj.url
+    local url
+    if entry.kind == "repo" then
+      ---@cast entry RepoEntry
+      url = entry.repo.url
+    else
+      ---@cast entry IssueEntry
+      url = entry.obj.url
+    end
     vim.fn.setreg("+", url, "c")
     utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
   end
