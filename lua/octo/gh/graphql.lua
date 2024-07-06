@@ -975,7 +975,7 @@ M.update_issue_mutation = [[
   }
 ]]
 
----@class IssueBase
+---@class Issue
 ---@field id string
 ---@field number integer
 ---@field state IssueState
@@ -985,19 +985,19 @@ M.update_issue_mutation = [[
 ---@field closedAt string?
 ---@field updatedAt string
 ---@field url string
+---@field viewerDidAuthor boolean
+---@field viewerCanUpdate boolean
 ---@field repository { nameWithOwner: string }
 ---@field milestone { title: string, state: MilestoneState }?
 ---@field author { login: string }
 ---@field participants { nodes: { login: string }[] }
 ---@field reactionGroups ReactionGroup[]?
+---@field projectCards { nodes: ProjectCard[] }
 ---@field timelineItems { pageInfo: PageInfo?, nodes: IssueTimelineItems[] }
 ---@field labels { nodes: Label[] }?
 ---@field assignee { nodes: { id: string, login: string, isViewer: boolean }[] }
 
----@class UpdateIssue: IssueBase
----@field comments IssueCommentBase[]
-
----@alias UpdateIssueStateMutationResponse GraphQLResponse<{ updateIssue: { issue: UpdateIssue } }>
+---@alias UpdateIssueStateMutationResponse GraphQLResponse<{ updateIssue: { issue: Issue } }>
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -1013,6 +1013,8 @@ M.update_issue_state_mutation = [[
         closedAt
         updatedAt
         url
+        viewerDidAuthor
+        viewerCanUpdate
         repository {
           nameWithOwner
         }
@@ -1035,35 +1037,16 @@ M.update_issue_state_mutation = [[
             totalCount
           }
         }
-        comments(first: 100) {
+        projectCards(last: 20) {
           nodes {
             id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
+            state
+            column {
+              name
             }
-            author {
-              login
+            project {
+              name
             }
-            viewerDidAuthor
-          }
-        }
-        labels(first: 20) {
-          nodes {
-            color
-            name
-          }
-        }
-        assignees(first: 20) {
-          nodes {
-            id
-            login
-            isViewer
           }
         }
         timelineItems(last: 100) {
@@ -1134,6 +1117,19 @@ M.update_issue_state_mutation = [[
               }
               createdAt
             }
+          }
+        }
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
+        }
+        assignees(first: 20) {
+          nodes {
+            id
+            login
+            isViewer
           }
         }
       }
@@ -1645,15 +1641,13 @@ query($endCursor: String) {
 ---@field actor { login: string }?
 ---@field dismissalMessage string?
 
----@class IssueCommentBase
+---@class IssueComment
 ---@field id string
 ---@field body string
 ---@field createdAt string
 ---@field reactionGroups ReactionGroup[]?
 ---@field author { login: string }?
 ---@field viewerDidAuthor boolean
-
----@class IssueComment: IssueCommentBase
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
 
@@ -2042,11 +2036,6 @@ query($endCursor: String) {
 
 ---@alias IssueState "CLOSED"|"OPEN"
 ---@alias IssueTimelineItems LabeledEvent|UnlabeledEvent|IssueCommentWithTypename|ClosedEvent|ReopenedEvent|AssignedEvent
-
----@class Issue: IssueBase
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field projectCards { nodes: ProjectCard[] }
 
 ---@alias IssueQueryResponse GraphQLResponse<{ repository: { issue: Issue } }>
 

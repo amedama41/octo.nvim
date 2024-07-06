@@ -284,7 +284,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
 end
 
 ---@param bufnr integer
----@param issue IssueBase|PullRequest
+---@param issue Issue|PullRequest
 ---@param update boolean?
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
