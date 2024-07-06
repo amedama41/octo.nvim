@@ -1156,17 +1156,21 @@ function M.merge_pr(...)
       table.insert(args, "--delete-branch")
     end
   end
+  local merge_method = defaultMergeMethod
   local has_flag = false
   for i = 1, params.n do
     if params[i] == "commit" then
       table.insert(args, "--merge")
       has_flag = true
+      merge_method = "commit"
     elseif params[i] == "squash" then
       table.insert(args, "--squash")
       has_flag = true
+      merge_method = "squash"
     elseif params[i] == "rebase" then
       table.insert(args, "--rebase")
       has_flag = true
+      merge_method = "rebase"
     end
   end
   if not has_flag then
@@ -1178,13 +1182,17 @@ function M.merge_pr(...)
       table.insert(args, "--merge")
     end
   end
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      utils.info(output .. " " .. stderr)
-      writers.write_state(bufnr)
-    end,
-  }
+  local msg = ("Does merge this PR? (using %s merge)"):format(merge_method)
+  local choice = vim.fn.confirm(msg, "&Yes\n&No", 2, "Question")
+  if choice == 1 then
+    gh.run {
+      args = args,
+      cb = function(output, stderr)
+        utils.info("Merge result: " .. output .. " " .. stderr)
+        writers.write_state(bufnr)
+      end,
+    }
+  end
 end
 
 function M.show_pr_diff()
