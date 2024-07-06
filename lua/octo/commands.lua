@@ -992,13 +992,26 @@ function M.save_pr(opts)
   -- You cannot update the base branch on a pull request to point to another repository.
   -- get repo default branch
   local default_branch = opts.info.defaultBranchRef.name
+  local remote_branches = vim.iter(opts.info.refs.nodes):map(function(remote_branch)
+    return remote_branch.name
+  end):totable()
+  function _G.octo_remote_branch_completion(arg_lead, _, _)
+    return vim.iter(remote_branches):filter(function(remote_branch)
+      if remote_branch == opts.remote_branch then
+        return false
+      end
+      return vim.startswith(remote_branch, arg_lead)
+    end):totable()
+  end
   local base_ref_name = vim.fn.input {
     prompt = "Enter BASE branch: ",
     default = default_branch,
     highlight = function(input)
       return { { 0, #input, "String" } }
     end,
+    completion = 'customlist,v:lua.octo_remote_branch_completion',
   }
+  _G.octo_remote_branch_completion = nil
   -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
   -- namespace head_ref_name with a user like this: username:branch.
   local head_ref_name = vim.fn.input {
@@ -1143,17 +1156,21 @@ function M.merge_pr(...)
       table.insert(args, "--delete-branch")
     end
   end
+  local merge_method = defaultMergeMethod
   local has_flag = false
   for i = 1, params.n do
     if params[i] == "commit" then
       table.insert(args, "--merge")
       has_flag = true
+      merge_method = "commit"
     elseif params[i] == "squash" then
       table.insert(args, "--squash")
       has_flag = true
+      merge_method = "squash"
     elseif params[i] == "rebase" then
       table.insert(args, "--rebase")
       has_flag = true
+      merge_method = "rebase"
     end
   end
   if not has_flag then
@@ -1165,13 +1182,17 @@ function M.merge_pr(...)
       table.insert(args, "--merge")
     end
   end
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      utils.info(output .. " " .. stderr)
-      writers.write_state(bufnr)
-    end,
-  }
+  local msg = ("Does merge this PR? (using %s merge)"):format(merge_method)
+  local choice = vim.fn.confirm(msg, "&Yes\n&No", 2, "Question")
+  if choice == 1 then
+    gh.run {
+      args = args,
+      cb = function(output, stderr)
+        utils.info("Merge result: " .. output .. " " .. stderr)
+        writers.write_state(bufnr)
+      end,
+    }
+  end
 end
 
 function M.show_pr_diff()
