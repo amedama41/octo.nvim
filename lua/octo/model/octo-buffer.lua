@@ -464,11 +464,14 @@ function OctoBuffer:do_save_title_and_body()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
+          ---@type UpdateIssueMutationResponse|UpdatePullRequestMutationResponse
           local resp = vim.fn.json_decode(output)
           local obj
           if self:isPullRequest() then
+            ---@cast resp UpdatePullRequestMutationResponse
             obj = resp.data.updatePullRequest.pullRequest
           elseif self:isIssue() then
+            ---@cast resp UpdateIssueMutationResponse
             obj = resp.data.updateIssue.issue
           end
           if title_metadata.body == obj.title then

@@ -157,6 +157,7 @@ M.start_review_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed_mutation = [[
   mutation {
@@ -173,6 +174,7 @@ M.mark_file_as_viewed_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#unmarkfileasviewed
 M.unmark_file_as_viewed_mutation = [[
   mutation {
@@ -189,6 +191,7 @@ M.unmark_file_as_viewed_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.submit_pull_request_review_mutation = [[
   mutation {
@@ -201,6 +204,7 @@ M.submit_pull_request_review_mutation = [[
   }
 ]]
 
+-- not use response
 M.delete_pull_request_review_mutation = [[
 mutation {
   deletePullRequestReview(input: {pullRequestReviewId: "%s"}) {
@@ -212,7 +216,6 @@ mutation {
 }
 ]]
 
----TODO
 ---@alias AddPullRequestReviewThreadMutationResponse GraphQLResponse<{ addPullRequestReviewThread: { thread: { id: string, comments: { nodes: { id: string, body: string }[] }, pullRequest: { reviewThreads: { nodes: PullRequestReviewThread[] } } } } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
@@ -235,6 +238,7 @@ mutation {
 }
 ]]
 
+-- same as AddPullRequestReviewThreadMutationResponse
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation = [[
 mutation {
@@ -355,17 +359,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
   }
 ]]
 
--- M.add_pull_request_review_comment_mutation =
--- [[
---   mutation {
---     addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: "%s", body: "%s"}) {
---       comment{
---         id
---         body
---       }
---     }
---   }
--- ]]
+---@alias DeleteIssueCommentMutationResponse GraphQLResponse<{ deleteIssueComment: { clientMutationId: string } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#deleteissuecomment
 M.delete_issue_comment_mutation = [[
@@ -386,22 +380,6 @@ M.delete_pull_request_review_comment_mutation = [[
         pullRequest {
 ]] .. M.review_threads .. [[
         }
-      }
-    }
-  }
-]]
-
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_mutation = [[
-  mutation {
-    updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
-      issue {
-        id
-        number
-        state
-        title
-        body
-        repository { nameWithOwner }
       }
     }
   }
@@ -547,19 +525,15 @@ M.create_issue_mutation = [[
   }
 ]]
 
+---@alias UpdateIssueMutationResponse GraphQLResponse<{ updateIssue: { issue: { title: string, body: string } } }>
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
   mutation {
     updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
       issue {
-        id
-        number
-        state
         title
         body
-        repository {
-          nameWithOwner
-        }
       }
     }
   }
@@ -727,14 +701,13 @@ M.update_issue_state_mutation = [[
   }
 ]]
 
+---@alias UpdatePullRequestMutationResponse GraphQLResponse<{ updatePullRequest: { pullRequest: { title: string, body: string } } }>
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
   mutation {
     updatePullRequest(input: {pullRequestId: "%s", title: "%s", body: "%s"}) {
       pullRequest {
-        id
-        number
-        state
         title
         body
       }
@@ -1879,6 +1852,7 @@ query {
 }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
 M.add_project_card_mutation = [[
   mutation {
@@ -1892,6 +1866,7 @@ M.add_project_card_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#moveprojectcard
 M.move_project_card_mutation = [[
   mutation {
@@ -1905,6 +1880,7 @@ M.move_project_card_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#deleteprojectcard
 M.delete_project_card_mutation = [[
   mutation {
@@ -2015,6 +1991,7 @@ query {
 }
 ]]
 
+-- TODO
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
 M.add_project_v2_item_mutation = [[
   mutation {
@@ -2026,6 +2003,7 @@ M.add_project_v2_item_mutation = [[
   }
 ]]
 
+-- TODO
 -- https://docs.github.com/en/graphql/reference/mutations#updateprojectv2itemfieldvalue
 M.update_project_v2_item_mutation = [[
   mutation {
@@ -2044,6 +2022,7 @@ M.update_project_v2_item_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#deleteprojectv2item
 M.delete_project_v2_item_mutation = [[
   mutation {
@@ -2068,6 +2047,7 @@ M.create_label_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation = [[
   mutation {
@@ -2084,6 +2064,7 @@ M.add_labels_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.remove_labels_mutation = [[
   mutation {
@@ -2120,6 +2101,8 @@ M.labels_query = [[
   }
 ]]
 
+---@alias IssueLabelsQeuryResponse GraphQLResponse<{ repository: { issue: { labels: { nodes: LabelWithId[] } } } }>
+
 M.issue_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
@@ -2135,6 +2118,8 @@ M.issue_labels_query = [[
     }
   }
 ]]
+
+---@alias PullRequestLabelsQeuryResponse GraphQLResponse<{ repository: { pullRequest: { labels: { nodes: LabelWithId[] } } } }>
 
 M.pull_request_labels_query = [[
   query {
@@ -2188,6 +2173,7 @@ M.pull_request_assignees_query = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
 M.add_assignees_mutation = [[
   mutation {
@@ -2204,6 +2190,7 @@ M.add_assignees_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#removeassigneestoassignable
 M.remove_assignees_mutation = [[
   mutation {
@@ -2220,6 +2207,7 @@ M.remove_assignees_mutation = [[
   }
 ]]
 
+-- not use response
 -- https://docs.github.com/en/graphql/reference/mutations#requestreviews
 -- for teams use `teamIds`
 M.request_reviews_mutation = [[
@@ -2296,26 +2284,6 @@ query {
     }
     twitterUsername
     websiteUrl
-  }
-}
-]]
-
-M.changed_files_query = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    pullRequest(number: %d) {
-      files(first:100, after: $endCursor) {
-        nodes {
-          additions
-          deletions
-          path
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-      }
-    }
   }
 }
 ]]

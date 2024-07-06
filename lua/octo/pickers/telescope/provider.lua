@@ -813,8 +813,9 @@ function M.select_assigned_label(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        ---@type LabelsQeuryResponse
+        ---@type IssueLabelsQeuryResponse|PullRequestLabelsQeuryResponse
         local resp = vim.fn.json_decode(output)
+        ---@type LabelWithId[]
         local labels = resp.data.repository[key].labels.nodes
         pickers
           .new(opts, {
