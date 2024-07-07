@@ -538,9 +538,10 @@ end
 ---@param comment PullRequestReview|PullRequestReviewComment|IssueComment
 ---@param kind "PullRequestReview"|"PullRequestReviewComment"|"PullRequestComment"|"IssueComment"
 ---@param line integer?
+---@param thread_metadata ThreadMetadata?
 ---@return integer
 ---@return integer
-function M.write_comment(bufnr, comment, kind, line)
+function M.write_comment(bufnr, comment, kind, line, thread_metadata)
   -- possible kinds:
   ---- IssueComment
   ---- PullRequestReview
@@ -650,7 +651,7 @@ function M.write_comment(bufnr, comment, kind, line)
     comments_metadata,
     CommentMetadata:new {
       author = comment.author ~= vim.NIL and comment.author.login or "",
-      id = comment.id,
+      id = (comment.id ~= "" and comment.id) or nil,
       dirty = false,
       savedBody = comment_body,
       body = comment_body,
@@ -670,6 +671,7 @@ function M.write_comment(bufnr, comment, kind, line)
       diffSide = comment.diffSide,
       snippetStartLine = comment.start_line,
       snippetEndLine = comment.end_line,
+      threadMetadata = thread_metadata,
     }
   )
 
@@ -1439,6 +1441,14 @@ function M.write_threads(bufnr, threads)
 
   -- print each of the threads
   for _, thread in ipairs(threads) do
+    local thread_metadata = ThreadMetadata:new {
+      threadId = (thread.id ~= "" and thread.id) or nil,
+      replyTo = thread.comments.nodes[1].id,
+      replyToRest = utils.extract_rest_id(thread.comments.nodes[1].url),
+      reviewId = thread.comments.nodes[1].pullRequestReview.id,
+      path = thread.path,
+      line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,
+    }
     local thread_start, thread_end
     for _, comment in ipairs(thread.comments.nodes) do
       -- augment comment details
@@ -1474,7 +1484,7 @@ function M.write_threads(bufnr, threads)
         end
       end
 
-      comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")
+      comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment", nil, thread_metadata)
       folds.create(bufnr, comment_start + 1, comment_end, true)
       thread_end = comment_end
     end
@@ -1487,14 +1497,7 @@ function M.write_threads(bufnr, threads)
     })
     local buffer = octo_buffers[bufnr]
     -- store thread info in the octo buffer for later reference
-    buffer.threadsMetadata[tostring(thread_mark_id)] = ThreadMetadata:new {
-      threadId = thread.id,
-      replyTo = thread.comments.nodes[1].id,
-      replyToRest = utils.extract_rest_id(thread.comments.nodes[1].url),
-      reviewId = thread.comments.nodes[1].pullRequestReview.id,
-      path = thread.path,
-      line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,
-    }
+    buffer.threadsMetadata[tostring(thread_mark_id)] = thread_metadata
   end
 
   return comment_end

@@ -1,7 +1,7 @@
 local M = {}
 
 ---@class ThreadMetadata
----@field threadId string
+---@field threadId string|nil
 ---@field replyTo string
 ---@field replyToRest string?
 ---@field reviewId string
@@ -13,7 +13,7 @@ local ThreadMetadata = {}
 ThreadMetadata.__index = ThreadMetadata
 
 ---@class ThreadMetadataOpts
----@field threadId string
+---@field threadId string|nil
 ---@field replyTo string
 ---@field replyToRest string?
 ---@field reviewId string

@@ -408,7 +408,7 @@ function OctoBuffer:save()
   -- comments
   for _, comment_metadata in ipairs(self.commentsMetadata) do
     if comment_metadata.body ~= comment_metadata.savedBody then
-      if comment_metadata.id == -1 then
+      if comment_metadata.id == nil then
         -- we use -1 as an indicator for new comments for which we dont currently have a GH id
         if comment_metadata.kind == "IssueComment" then
           self:do_add_issue_comment(comment_metadata)
@@ -511,15 +511,9 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
         local respBody = resp.data.addComment.commentEdge.node.body
         local respId = resp.data.addComment.commentEdge.node.id
         if utils.trim(comment_metadata.body) == utils.trim(respBody) then
-          local comments = self.commentsMetadata
-          for i, c in ipairs(comments) do
-            if tonumber(c.id) == -1 then
-              comments[i].id = respId
-              comments[i].savedBody = respBody
-              comments[i].dirty = false
-              break
-            end
-          end
+          comment_metadata.id = respId
+          comment_metadata.savedBody = respBody
+          comment_metadata.dirty = false
           self:render_signs()
         end
       end
@@ -548,16 +542,10 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
         local resp_comment = resp.data.addPullRequestReviewComment.comment
         local comment_end
         if utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
-          local comments = self.commentsMetadata
-          for i, c in ipairs(comments) do
-            if tonumber(c.id) == -1 then
-              comments[i].id = resp_comment.id
-              comments[i].savedBody = resp_comment.body
-              comments[i].dirty = false
-              comment_end = comments[i].endLine
-              break
-            end
-          end
+          comment_metadata.id = resp_comment.id
+          comment_metadata.savedBody = resp_comment.body
+          comment_metadata.dirty = false
+          comment_end = comment_metadata.endLine
 
           local threads = resp_comment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
@@ -663,21 +651,17 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
           if not utils.is_blank(obj.thread) then
             local new_comment = obj.thread.comments.nodes[1]
             if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
-              local comments = self.commentsMetadata
-              for i, c in ipairs(comments) do
-                if tonumber(c.id) == -1 then
-                  comments[i].id = new_comment.id
-                  comments[i].savedBody = new_comment.body
-                  comments[i].dirty = false
-                  break
-                end
-              end
+              comment_metadata.id = new_comment.id
+              comment_metadata.savedBody = new_comment.body
+              comment_metadata.dirty = false
               local threads = obj.thread.pullRequest.reviewThreads.nodes
               if review then
                 review:update_threads(threads)
               end
               self:render_signs()
             end
+            comment_metadata.threadMetadata.threadId = obj.thread.id
+            comment_metadata.threadMetadata.replyTo = obj.thread.comments.nodes[1].id
           else
             utils.error "Failed to create thread"
             return
@@ -692,8 +676,10 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
     else
       -- get the line number the comment is on
       local line
-      for _, thread in ipairs(vim.tbl_values(self.threadsMetadata)) do
-        if thread.threadId == -1 then
+      ---@type ThreadMetadata[]
+      local thread_metadatas = vim.tbl_values(self.threadsMetadata)
+      for _, thread in ipairs(thread_metadatas) do
+        if thread.threadId == nil then
           line = thread.line
         end
       end
@@ -761,15 +747,9 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
             local resp = r.data.addPullRequestReviewComment
             if not utils.is_blank(resp.comment) then
               if utils.trim(comment_metadata.body) == utils.trim(resp.comment.body) then
-                local comments = self.commentsMetadata
-                for i, c in ipairs(comments) do
-                  if tonumber(c.id) == -1 then
-                    comments[i].id = resp.comment.id
-                    comments[i].savedBody = resp.comment.body
-                    comments[i].dirty = false
-                    break
-                  end
-                end
+                comment_metadata.id = resp.comment.id
+                comment_metadata.savedBody = resp.comment.body
+                comment_metadata.dirty = false
                 if review then
                   local threads = resp.comment.pullRequest.reviewThreads.nodes
                   review:update_threads(threads)
@@ -819,15 +799,9 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
         local resp = vim.fn.json_decode(output)
         if not utils.is_blank(resp) then
           if utils.trim(comment_metadata.body) == utils.trim(resp.body) then
-            local comments = self.commentsMetadata
-            for i, c in ipairs(comments) do
-              if tonumber(c.id) == -1 then
-                comments[i].id = resp.id
-                comments[i].savedBody = resp.body
-                comments[i].dirty = false
-                break
-              end
-            end
+            comment_metadata.id = tostring(resp.id)
+            comment_metadata.savedBody = resp.body
+            comment_metadata.dirty = false
             self:render_signs()
           end
         else
@@ -874,14 +848,8 @@ function OctoBuffer:do_update_comment(comment_metadata)
           resp_comment = resp.data.updatePullRequestReview.pullRequestReview
         end
         if resp_comment and utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
-          local comments = self.commentsMetadata
-          for i, c in ipairs(comments) do
-            if c.id == comment_metadata.id then
-              comments[i].savedBody = comment_metadata.body
-              comments[i].dirty = false
-              break
-            end
-          end
+          comment_metadata.savedBody = comment_metadata.body
+          comment_metadata.dirty = false
           self:render_signs()
         end
       end

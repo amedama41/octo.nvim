@@ -10,7 +10,7 @@ local utils = require "octo.utils"
 ---@class Review
 ---@field repo string
 ---@field number integer
----@field id integer
+---@field id string|nil
 ---@field threads PullRequestReviewThread[]
 ---@field files FileEntry[]
 ---@field layout Layout
@@ -24,7 +24,7 @@ Review.__index = Review
 function Review:new(pull_request)
   local this = {
     pull_request = pull_request,
-    id = -1,
+    id = nil,
     threads = {},
     files = {},
   }
@@ -191,11 +191,11 @@ function Review:discard()
           local delete_query = graphql("delete_pull_request_review_mutation", self.id)
           gh.run {
             args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
-            cb = function(output, stderr)
-              if stderr and not utils.is_blank(stderr) then
-                vim.error(stderr)
-              elseif output then
-                self.id = -1
+            cb = function(del_output, del_stderr)
+              if del_stderr and not utils.is_blank(del_stderr) then
+                vim.error(del_stderr)
+              elseif del_output then
+                self.id = nil
                 self.threads = {}
                 self.files = {}
                 utils.info "Pending review discarded"
@@ -233,7 +233,7 @@ function Review:update_threads(threads)
 end
 
 function Review:collect_submit_info()
-  if self.id == -1 then
+  if not self.id then
     utils.error "No review in progress"
     return
   end
@@ -400,15 +400,16 @@ function Review:show_new_thread_panel(file, subjectType, split, line1, line2, di
         diffSide = split,
         startDiffSide = split,
         isCollapsed = false,
-        id = -1,
+        id = "",
         subjectType = subjectType,
         comments = {
           nodes = {
             {
-              id = -1,
+              id = "",
               path = file.path,
               subjectType = subjectType,
               author = { login = vim.g.octo_viewer },
+              authorAssociation = "NONE",
               state = "PENDING",
               replyTo = vim.NIL,
               url = vim.NIL,

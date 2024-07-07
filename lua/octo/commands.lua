@@ -444,7 +444,7 @@ function M.add_comment()
   local comment_kind
   ---@type IssueComment|PullRequestReviewComment
   local comment = {
-    id = -1,
+    id = "",
     author = { login = vim.g.octo_viewer },
     createdAt = vim.fn.strftime "%FT%TZ",
     body = " ",
@@ -495,7 +495,7 @@ function M.add_comment()
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
     assert(_thread)
     vim.api.nvim_buf_set_lines(bufnr, _thread.bufferEndLine, _thread.bufferEndLine, false, { "x", "x", "x", "x" })
-    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1)
+    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1, _thread)
     vim.fn.execute(":" .. _thread.bufferEndLine + 3)
     vim.cmd [[startinsert]]
   end
@@ -653,6 +653,9 @@ function M.resolve_thread()
     return
   end
   local thread_id = _thread.threadId
+  if thread_id == nil then
+    return
+  end
   local thread_line = _thread.bufferStartLine
   local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run {
@@ -684,6 +687,9 @@ function M.unresolve_thread()
     return
   end
   local thread_id = _thread.threadId
+  if thread_id == nil then
+    return
+  end
   local thread_line = _thread.bufferStartLine
   local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run {

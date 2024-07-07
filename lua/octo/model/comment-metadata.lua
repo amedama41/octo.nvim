@@ -1,7 +1,7 @@
 local M = {}
 
 ---@class CommentMetadata
----@field id string
+---@field id string|nil
 ---@field author string
 ---@field savedBody string
 ---@field body string
@@ -21,16 +21,17 @@ local M = {}
 ---@field reviewId string?
 ---@field path string?
 ---@field subjectType PullRequestReviewThreadSubjectType?
----@field diffSide string?
+---@field diffSide DiffSide?
 ---@field snippetStartLine integer?
 ---@field snippetEndLine integer?
 ---@field bufferStartLine integer?
 ---@field bufferEndLine integer?
+---@field threadMetadata ThreadMetadata?
 local CommentMetadata = {}
 CommentMetadata.__index = CommentMetadata
 
 ---@class CommentMetadataOpts
----@field id string
+---@field id string|nil
 ---@field author string
 ---@field savedBody string
 ---@field body string
@@ -51,6 +52,7 @@ CommentMetadata.__index = CommentMetadata
 ---@field diffSide DiffSide?
 ---@field snippetStartLine integer?
 ---@field snippetEndLine integer?
+---@field threadMetadata ThreadMetadata?
 
 ---CommentMetadata constructor.
 ---@param opts CommentMetadataOpts
@@ -80,6 +82,7 @@ function CommentMetadata:new(opts)
     endLine = opts.endLine,
     snippetStartLine = opts.snippetStartLine,
     snippetEndLine = opts.snippetEndLine,
+    threadMetadata = opts.threadMetadata,
   }
   setmetatable(this, self)
   return this
