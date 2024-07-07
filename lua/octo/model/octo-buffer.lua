@@ -527,7 +527,7 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
   -- create new thread reply
   local query = graphql(
     "add_pull_request_review_comment_mutation",
-    comment_metadata.replyTo,
+    comment_metadata.replyTo.id,
     comment_metadata.body,
     comment_metadata.reviewId
   )
@@ -878,11 +878,16 @@ function OctoBuffer:update_metadata()
   for _, metadata in ipairs(metadata_objs) do
     local mark =
       vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, { details = true })
-    local start_line, end_line, text = utils.get_extmark_region(self.bufnr, mark)
-    metadata.body = text
+    local start_line, end_line = utils.get_extmark_region(mark)
+    -- Indexing is zero-based, end-exclusive, so adding 1 to end line
+    local status, lines = pcall(vim.api.nvim_buf_get_lines, self.bufnr, start_line, end_line + 1, true)
+    if status and lines then
+      local text = vim.fn.join(lines, "\n")
+      metadata.body = text
+      metadata.dirty = utils.trim(metadata.body) ~= utils.trim(metadata.savedBody) and true or false
+    end
     metadata.startLine = start_line
     metadata.endLine = end_line
-    metadata.dirty = utils.trim(metadata.body) ~= utils.trim(metadata.savedBody) and true or false
   end
 end
 

@@ -7,8 +7,8 @@ local M = {}
 ---@field body string
 ---@field dirty boolean
 ---@field extmark integer
----@field startLine integer?
----@field endLine integer?
+---@field startLine integer
+---@field endLine integer
 ---@field namespace integer
 ---@field reactionGroups table[]
 ---@field reactionLine integer?
@@ -37,6 +37,8 @@ CommentMetadata.__index = CommentMetadata
 ---@field body string
 ---@field dirty boolean
 ---@field extmark integer
+---@field startLine integer
+---@field endLine integer
 ---@field namespace integer
 ---@field reactionGroups table[]
 ---@field reactionLine integer?
@@ -65,6 +67,8 @@ function CommentMetadata:new(opts)
     savedBody = opts.savedBody,
     body = opts.body,
     extmark = opts.extmark,
+    startLine = opts.startLine,
+    endLine = opts.endLine,
     namespace = opts.namespace,
     viewerCanUpdate = opts.viewerCanUpdate,
     viewerCanDelete = opts.viewerCanDelete,
@@ -78,8 +82,6 @@ function CommentMetadata:new(opts)
     path = opts.path,
     subjectType = opts.subjectType,
     diffSide = opts.diffSide,
-    startLine = opts.startLine,
-    endLine = opts.endLine,
     snippetStartLine = opts.snippetStartLine,
     snippetEndLine = opts.snippetEndLine,
     threadMetadata = opts.threadMetadata,

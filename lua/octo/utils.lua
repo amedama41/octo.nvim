@@ -1170,12 +1170,10 @@ function M.diffstat(stats)
   }
 end
 
----@param bufnr integer
 ---@param mark vim.api.keyset.get_extmark_item
----@return integer?
----@return integer?
----@return string?
-function M.get_extmark_region(bufnr, mark)
+---@return integer
+---@return integer
+function M.get_extmark_region(mark)
   -- extmarks are placed on
   -- start line - 1 (except for line 0)
   -- end line + 2
@@ -1187,12 +1185,7 @@ function M.get_extmark_region(bufnr, mark)
   if start_line > end_line then
     end_line = start_line
   end
-  -- Indexing is zero-based, end-exclusive, so adding 1 to end line
-  local status, lines = pcall(vim.api.nvim_buf_get_lines, bufnr, start_line, end_line + 1, true)
-  if status and lines then
-    local text = vim.fn.join(lines, "\n")
-    return start_line, end_line, text
-  end
+  return start_line, end_line
 end
 
 function M.fork_repo()

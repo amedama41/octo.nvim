@@ -464,6 +464,14 @@ function M.add_comment()
   }
 
   local _thread = buffer:get_thread_at_cursor()
+  local write_comment_opts = {
+    thread_metadata = _thread,
+    diffSide = nil,
+    start_line = nil,
+    end_line = nil,
+    replyToRest = nil,
+  }
+
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
     -- Adds a thread comment on thread panel
     assert(_thread)
@@ -471,16 +479,16 @@ function M.add_comment()
     comment_kind = "PullRequestReviewComment"
     comment.pullRequestReview = { id = reviews.get_current_review().id }
     comment.state = "PENDING"
-    comment.replyTo = _thread.replyTo
-    comment.replyToRest = _thread.replyToRest
+    comment.replyTo = { id = _thread.replyTo, url = "" }
+    write_comment_opts.replyToRest = _thread.replyToRest
   elseif not utils.is_blank(_thread) and not buffer:isReviewThread() then
     -- Adds a thread comment on PR view
     assert(_thread)
     ---@cast comment PullRequestReviewComment
     comment_kind = "PullRequestComment"
     comment.state = "SUBMITTED"
-    comment.replyTo = _thread.replyTo
-    comment.replyToRest = _thread.replyToRest
+    comment.replyTo = { id = _thread.replyTo, url = "" }
+    write_comment_opts.replyToRest = _thread.replyToRest
   elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
     -- Adds a regular comment on PR or issue view
     comment_kind = "IssueComment"
@@ -495,7 +503,7 @@ function M.add_comment()
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
     assert(_thread)
     vim.api.nvim_buf_set_lines(bufnr, _thread.bufferEndLine, _thread.bufferEndLine, false, { "x", "x", "x", "x" })
-    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1, _thread)
+    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1, write_comment_opts)
     vim.fn.execute(":" .. _thread.bufferEndLine + 3)
     vim.cmd [[startinsert]]
   end
@@ -1243,7 +1251,7 @@ end
 local function get_reaction_line(bufnr, extmark)
   local prev_extmark = extmark
   local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, { details = true })
-  local _, end_line = utils.get_extmark_region(bufnr, mark)
+  local _, end_line = utils.get_extmark_region(mark)
   return end_line + 3
 end
 
