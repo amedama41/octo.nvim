@@ -226,9 +226,9 @@ function M.create_highlight(rgb_hex, options)
       vim.cmd(string.format("highlight %s guifg=#%s", highlight_name, rgb_hex))
     else
       local r, g, b = rgb_hex:sub(1, 2), rgb_hex:sub(3, 4), rgb_hex:sub(5, 6)
-      r, g, b = tonumber(r, 16), tonumber(g, 16), tonumber(b, 16)
+      local hex_r, hex_g, hex_b = tonumber(r, 16), tonumber(g, 16), tonumber(b, 16)
       local fg_color
-      if color_is_bright(r, g, b) then
+      if color_is_bright(hex_r, hex_g, hex_b) then
         fg_color = "000000"
       else
         fg_color = "ffffff"

@@ -160,7 +160,7 @@ local function makedaynum(y, m, d)
 end
 -- date from day number, month is zero base
 local function breakdaynum(g)
-  local g = g + 306
+  g = g + 306
   local y = floor((10000 * g + 14780) / 3652425)
   local d = g - dayfromyear(y)
   if d < 0 then
@@ -294,8 +294,8 @@ local function getequivyear(y)
       and yt[-6]
       and yt[-7]
     then
-      getequivyear = function(y)
-        return yt[(weekday(makedaynum(y, 0, 1)) + 1) * (isleapyear(y) and -1 or 1)]
+      getequivyear = function(y_)
+        return yt[(weekday(makedaynum(y_, 0, 1)) + 1) * (isleapyear(y_) and -1 or 1)]
       end
       return getequivyear(y)
     end
@@ -496,7 +496,7 @@ local function date_parse(str)
         elseif inlist(x, sl_timezone, 2, sw) then
           c = fix(sw[0]) -- ignore gmt and utc
           if c ~= 0 then
-            setz(c, x)
+            setz(c)
           end
         elseif not inlist(x, sl_weekdays, 2, sw) then
           sw:back()
@@ -927,6 +927,7 @@ local tvspec = {
     return fmt("%s%.9f", x >= 10 and "" or "0", x)
   end,
   -- percent character %
+  ---@diagnostic disable-next-line:unused-local
   ["%%"] = function(self)
     return "%"
   end,
@@ -1105,8 +1106,8 @@ date.diff = dobj.__sub
 function date.isleapyear(v)
   local y = fix(v)
   if not y then
-    y = date_getdobj(v)
-    y = y and y:getyear()
+    local y_table = date_getdobj(v)
+    y = y_table and y_table:getyear()
   end
   return isleapyear(y + 0)
 end

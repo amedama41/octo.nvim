@@ -523,6 +523,10 @@ function M.delete_comment()
   elseif comment.kind == "PullRequestReviewComment" then
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
     local _thread = buffer:get_thread_at_cursor()
+    if not _thread then
+      utils.error "The cursor does not seem to be located at any thread"
+      return
+    end
     threadId = _thread.threadId
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
@@ -580,9 +584,9 @@ function M.delete_comment()
           end
           if review_was_deleted then
             -- we deleted the last pending comment and therefore GitHub closed the review, create a new one
-            review:create(function(resp)
-              review.id = resp.data.addPullRequestReview.pullRequestReview.id
-              local updated_threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
+            review:create(function(create_resp)
+              review.id = create_resp.data.addPullRequestReview.pullRequestReview.id
+              local updated_threads = create_resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
               review:update_threads(updated_threads)
             end)
           else
@@ -1508,8 +1512,8 @@ function M.reload(bufnr)
   require("octo").load_buffer(bufnr)
 end
 
----@param label string?
-function M.create_label(label)
+---@param label_name string?
+function M.create_label(label_name)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1519,8 +1523,8 @@ function M.create_label(label)
   local repo_id = utils.get_repo_id(buffer.repo)
 
   local name, color, description
-  if label then
-    name = label
+  if label_name then
+    name = label_name
     description = ""
     local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
     math.randomseed(os.time())

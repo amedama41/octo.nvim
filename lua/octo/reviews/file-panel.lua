@@ -234,6 +234,11 @@ function FilePanel:render()
   end
 
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    utils.error "Not found the current review"
+    return
+  end
+
   local conf = config.values
   local strlen = vim.fn.strlen
   local s = "Files changed"

@@ -906,10 +906,10 @@ function M.select_user(owner, repository, cb)
                 },
                 sorter = conf.generic_sorter(opts),
                 attach_mappings = function()
-                  actions.select_default:replace(function(prompt_bufnr)
+                  actions.select_default:replace(function(teams_prompt_bufnr)
                     ---@type TeamEntry
-                    local selected_team = action_state.get_selected_entry(prompt_bufnr)
-                    actions.close(prompt_bufnr)
+                    local selected_team = action_state.get_selected_entry(teams_prompt_bufnr)
+                    actions.close(teams_prompt_bufnr)
                     cb(selected_team.team.id)
                   end)
                   return true

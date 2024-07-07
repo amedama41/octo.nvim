@@ -21,7 +21,7 @@ local M = {}
 ---@field titleMetadata TitleMetadata
 ---@field bodyMetadata BodyMetadata
 ---@field commentsMetadata CommentMetadata[]
----@field threadsMetadata ThreadMetadata[]
+---@field threadsMetadata table<string, ThreadMetadata>
 ---@field node PullRequestWithReviewThreads|Issue|Repository?
 ---@field taggable_users string[]?
 ---@field owner string?
@@ -565,27 +565,30 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
               end
             end
           end
-          local mark_id
+          ---@type integer|nil
+          local mark_id = nil
           for markId, threadMetadata in pairs(self.threadsMetadata) do
             if threadMetadata.threadId == thread_id then
-              mark_id = markId
+              mark_id = tonumber(markId)
             end
           end
-          local extmark = vim.api.nvim_buf_get_extmark_by_id(
-            self.bufnr,
-            constants.OCTO_THREAD_NS,
-            tonumber(mark_id),
-            { details = true }
-          )
-          local thread_start = extmark[1]
-          -- update extmark
-          vim.api.nvim_buf_del_extmark(self.bufnr, constants.OCTO_THREAD_NS, tonumber(mark_id))
-          local thread_mark_id = vim.api.nvim_buf_set_extmark(self.bufnr, constants.OCTO_THREAD_NS, thread_start, 0, {
-            end_line = comment_end + 2,
-            end_col = 0,
-          })
-          self.threadsMetadata[tostring(thread_mark_id)] = self.threadsMetadata[tostring(mark_id)]
-          self.threadsMetadata[tostring(mark_id)] = nil
+          if mark_id then
+            local extmark = vim.api.nvim_buf_get_extmark_by_id(
+              self.bufnr,
+              constants.OCTO_THREAD_NS,
+              mark_id,
+              { details = true }
+            )
+            local thread_start = extmark[1]
+            -- update extmark
+            vim.api.nvim_buf_del_extmark(self.bufnr, constants.OCTO_THREAD_NS, mark_id)
+            local thread_mark_id = vim.api.nvim_buf_set_extmark(self.bufnr, constants.OCTO_THREAD_NS, thread_start, 0, {
+              end_line = comment_end + 2,
+              end_col = 0,
+            })
+            self.threadsMetadata[tostring(thread_mark_id)] = self.threadsMetadata[tostring(mark_id)]
+            self.threadsMetadata[tostring(mark_id)] = nil
+          end
         end
       end
     end,

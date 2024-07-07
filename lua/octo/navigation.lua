@@ -75,10 +75,15 @@ end
 
 function M.go_to_file()
   local bufnr = vim.api.nvim_get_current_buf()
+  ---@type string|nil
   local path = ""
   local line = vim.api.nvim_win_get_cursor(0)[1]
   if utils.in_diff_window(bufnr) then
     _, path = utils.get_split_and_path(bufnr)
+    if not path then
+      utils.error "Not found the path for the this buffer"
+      return
+    end
   else
     local buffer = octo_buffers[bufnr]
     if not buffer then
@@ -88,6 +93,9 @@ function M.go_to_file()
       return
     end
     local _thread = buffer:get_thread_at_cursor()
+    if not _thread then
+      return
+    end
     path, line = _thread.path, _thread.line
   end
   local result = open_file_if_found(utils.path_join { vim.fn.getcwd(), path }, line)
