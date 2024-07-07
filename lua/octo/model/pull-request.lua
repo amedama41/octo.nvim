@@ -14,7 +14,7 @@ local M = {}
 ---@field right Rev
 ---@field local_right boolean
 ---@field local_left boolean
----@field files table
+---@field files table<string, FileViewedState>
 ---@field diff string
 local OctoPullRequest = {}
 OctoPullRequest.__index = OctoPullRequest
@@ -66,6 +66,24 @@ function OctoPullRequest:new(opts)
 end
 
 M.PullRequest = OctoPullRequest
+
+---@param left Rev
+---@param right Rev
+---@param files PullRequestChangedFile[]
+function OctoPullRequest:update(left, right, files)
+  self.left = left
+  self.right = right
+  utils.commit_exists(self.right.commit, function(exists)
+    self.local_right = exists
+  end)
+  utils.commit_exists(self.left.commit, function(exists)
+    self.local_left = exists
+  end)
+  self.files = {}
+  for _, file in ipairs(files) do
+    self.files[file.path] = file.viewerViewedState
+  end
+end
 
 ---Fetch the diff of the PR
 ---@param pr OctoPullRequest

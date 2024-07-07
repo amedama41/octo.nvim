@@ -246,6 +246,8 @@ function M.get_remote_host()
   return M.get_remote().host
 end
 
+---@param commit string
+---@param cb fun(exists: boolean)
 function M.commit_exists(commit, cb)
   if not Job then
     return

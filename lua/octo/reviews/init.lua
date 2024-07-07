@@ -56,6 +56,10 @@ function Review:start()
     self.id = resp.data.addPullRequestReview.pullRequestReview.id
     local threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
+    local pull_request = resp.data.addPullRequestReview.pullRequestReview.pullRequest
+    local left = Rev:new(pull_request.baseRefOid)
+    local right = Rev:new(pull_request.headRefOid)
+    self.pull_request:update(left, right, pull_request.files.nodes)
     self:initiate()
   end)
 end
@@ -105,6 +109,10 @@ function Review:resume()
     ---@type PullRequestReviewThread[]
     local threads = resp.data.repository.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
+    local pull_request = resp.data.repository.pullRequest
+    local left = Rev:new(pull_request.baseRefOid)
+    local right = Rev:new(pull_request.headRefOid)
+    self.pull_request:update(left, right, pull_request.files.nodes)
     self:initiate()
   end)
 end

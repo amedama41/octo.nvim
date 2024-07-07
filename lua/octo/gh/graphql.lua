@@ -140,7 +140,13 @@ M.unresolve_review_thread_mutation = [[
   }
 ]]
 
----@alias StartReviewMutationResponse GraphQLResponse<{ addPullRequestReview: { pullRequestReview: { id: string, state: string, pullRequest: { reviewThreads: { nodes: PullRequestReviewThread[] } } } } }>
+---@class StartReviewPullRequest
+---@field headRefOid string
+---@field baseRefOid string
+---@field files { nodes: PullRequestChangedFile[] }
+---@field reviewThreads { nodes: PullRequestReviewThread[] }
+
+---@alias StartReviewMutationResponse GraphQLResponse<{ addPullRequestReview: { pullRequestReview: { id: string, pullRequest: StartReviewPullRequest } } }>
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review_mutation = [[
@@ -148,8 +154,15 @@ M.start_review_mutation = [[
     addPullRequestReview(input: {pullRequestId: "%s"}) {
       pullRequestReview {
         id
-        state
         pullRequest {
+          headRefOid
+          baseRefOid
+          files(first:100) {
+            nodes {
+              path
+              viewerViewedState
+            }
+          }
 ]] .. M.review_threads .. [[
         }
       }
@@ -942,13 +955,24 @@ M.update_pull_request_state_mutation = [[
 
 ---@class GraphQLResponse<T>: { data: T, errors: any }
 
----@alias PendingReviewThreadsQueryResponse GraphQLResponse<{ repository: { pullRequest: { reviews: { nodes: BriefPullRequestReview[] }, reviewThreads: { nodes: PullRequestReviewThread[] } } } }>
+---@class PendingReviewPullRequest: StartReviewPullRequest
+---@field reviews { nodes: BriefPullRequestReview[] }
+
+---@alias PendingReviewThreadsQueryResponse GraphQLResponse<{ repository: { pullRequest: PendingReviewPullRequest } }>
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
 query {
   repository(owner:"%s", name:"%s") {
     pullRequest (number: %d){
+      headRefOid
+      baseRefOid
+      files(first:100) {
+        nodes {
+          path
+          viewerViewedState
+        }
+      }
       reviews(first:100, states:PENDING) {
         nodes {
           id
