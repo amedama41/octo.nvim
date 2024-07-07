@@ -855,35 +855,8 @@ M.update_pull_request_state_mutation = [[
               viewerDidAuthor
               state
               comments(last:100) {
-                totalCount
                 nodes{
                   id
-                  url
-                  replyTo { id url }
-                  body
-                  commit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author { login }
-                  createdAt
-                  lastEditedAt
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  originalPosition
-                  position
-                  state
-                  outdated
-                  diffHunk
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
                 }
               }
             }
@@ -931,9 +904,10 @@ M.update_pull_request_state_mutation = [[
 ---@field id string
 ---@field body string
 ---@field diffHunk string
----@field author { login: string }?
 ---@field createdAt string
 ---@field lastEditedAt string?
+---@field originalCommit { oid: string, abbreviatedOid: string }?
+---@field author { login: string }?
 ---@field authorAssociation CommentAuthorAssociation
 ---@field viewerDidAuthor boolean
 ---@field viewerCanUpdate boolean
@@ -941,19 +915,10 @@ M.update_pull_request_state_mutation = [[
 ---@field state PullRequestReviewCommentState
 ---@field url string
 ---@field replyTo { id: string, url: string }?
----@field reactionGroups ReactionGroup[]?
-
----@class PullRequestReviewCommentForPRReviewThread: PullRequestReviewComment
----@field originalCommit { oid: string, abbreviatedOid: string }?
 ---@field pullRequestReview { id: string, state: PullRequestReviewState }
 ---@field path string
 ---@field subjectType PullRequestReviewThreadSubjectType
-
----@class PullRequestReviewCommentForPRReview: PullRequestReviewComment
----@field commit { oid: string, abbreviatedOid: string }?
----@field originalPosition integer
----@field position integer?
----@field outdated boolean
+---@field reactionGroups ReactionGroup[]?
 
 ---@class PullRequestReviewThread
 ---@field id string
@@ -969,7 +934,7 @@ M.update_pull_request_state_mutation = [[
 ---@field isCollapsed boolean
 ---@field isOutdated boolean
 ---@field subjectType PullRequestReviewThreadSubjectType
----@field comments { nodes: PullRequestReviewCommentForPRReviewThread[] }
+---@field comments { nodes: PullRequestReviewComment[] }
 
 ---@class BriefPullRequestReview
 ---@field id string
@@ -1116,7 +1081,7 @@ query {
 ---@field author { login: string }?
 ---@field viewerDidAuthor boolean
 ---@field state PullRequestReviewState
----@field comments { totalCount: integer, nodes: PullRequestReviewCommentForPRReview[] }
+---@field comments { nodes: { id: string }[] }
 
 ---@class PullRequestReviewWithTypename: PullRequestReview
 ---@field __typename "PullRequestReview"
@@ -1365,35 +1330,8 @@ query($endCursor: String) {
             viewerDidAuthor
             state
             comments(last:100) {
-              totalCount
               nodes{
                 id
-                url
-                replyTo { id url }
-                body
-                commit {
-                  oid
-                  abbreviatedOid
-                }
-                author { login }
-                createdAt
-                lastEditedAt
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                originalPosition
-                position
-                state
-                outdated
-                diffHunk
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
               }
             }
           }
@@ -2792,35 +2730,8 @@ M.create_pr_mutation = [[
               viewerDidAuthor
               state
               comments(last:100) {
-                totalCount
                 nodes{
                   id
-                  url
-                  replyTo { id url }
-                  body
-                  commit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author { login }
-                  createdAt
-                  lastEditedAt
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  originalPosition
-                  position
-                  state
-                  outdated
-                  diffHunk
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
                 }
               }
             }

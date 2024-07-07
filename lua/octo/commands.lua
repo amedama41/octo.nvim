@@ -442,7 +442,7 @@ function M.add_comment()
   end
 
   local comment_kind
-  ---@type IssueComment|PullRequestReviewCommentForPRReviewThread
+  ---@type IssueComment|PullRequestReviewComment
   local comment = {
     id = -1,
     author = { login = vim.g.octo_viewer },
@@ -467,7 +467,7 @@ function M.add_comment()
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
     -- Adds a thread comment on thread panel
     assert(_thread)
-    ---@cast comment PullRequestReviewCommentForPRReviewThread
+    ---@cast comment PullRequestReviewComment
     comment_kind = "PullRequestReviewComment"
     comment.pullRequestReview = { id = reviews.get_current_review().id }
     comment.state = "PENDING"
@@ -476,7 +476,7 @@ function M.add_comment()
   elseif not utils.is_blank(_thread) and not buffer:isReviewThread() then
     -- Adds a thread comment on PR view
     assert(_thread)
-    ---@cast comment PullRequestReviewCommentForPRReviewThread
+    ---@cast comment PullRequestReviewComment
     comment_kind = "PullRequestComment"
     comment.state = "SUBMITTED"
     comment.replyTo = _thread.replyTo
@@ -535,7 +535,7 @@ function M.delete_comment()
       cb = function(output)
         -- TODO: deleting the last review thread comment, it deletes the whole thread and review
         -- In issue buffers, we should hide the thread snippet
-        ---@type any|DeletePullRequestReviewCommentMutationResponse
+        ---@type DeleteIssueCommentMutationResponse|DeletePullRequestReviewCommentMutationResponse
         local resp = vim.fn.json_decode(output)
 
         -- remove comment lines from the buffer

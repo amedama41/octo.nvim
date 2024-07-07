@@ -535,7 +535,7 @@ function M.write_details(bufnr, issue, update)
 end
 
 ---@param bufnr integer
----@param comment PullRequestReview|PullRequestReviewCommentForPRReviewThread|IssueComment
+---@param comment PullRequestReview|PullRequestReviewComment|IssueComment
 ---@param kind "PullRequestReview"|"PullRequestReviewComment"|"PullRequestComment"|"IssueComment"
 ---@param line integer?
 ---@return integer
@@ -582,7 +582,7 @@ function M.write_comment(bufnr, comment, kind, line)
     end
     separator = { string.rep(conf.timeline_separators.review, 240), "OctoTimelineSeparator.Review" }
   elseif kind == "PullRequestReviewComment" or kind == "PullRequestComment" then
-    ---@cast comment PullRequestReviewCommentForPRReviewThread
+    ---@cast comment PullRequestReviewComment
     -- Review thread comments
     table.insert(
       header_vt,
