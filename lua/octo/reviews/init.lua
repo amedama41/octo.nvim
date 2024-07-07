@@ -416,7 +416,7 @@ function Review:show_new_thread_panel(file, subjectType, split, line1, line2, di
               diffHunk = diff_hunk,
               createdAt = vim.fn.strftime "%FT%TZ",
               originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
-              body = " ",
+              body = "",
               viewerCanUpdate = true,
               viewerCanDelete = true,
               viewerDidAuthor = true,

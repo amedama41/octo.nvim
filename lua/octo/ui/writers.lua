@@ -238,7 +238,7 @@ end
 function M.write_body(bufnr, issue, line)
   local body = utils.trim(issue.body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
-    body = " "
+    body = ""
   end
   local description = body:gsub("\r\n", "\n")
   local lines = vim.split(description, "\n", { plain = true })
@@ -630,7 +630,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
   line = line + 2
   local comment_body = utils.trim(string.gsub(comment.body, "\r\n", "\n"))
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
-    comment_body = " "
+    comment_body = ""
   end
   local content = vim.split(comment_body, "\n", { plain = true })
   vim.list_extend(content, { "" })

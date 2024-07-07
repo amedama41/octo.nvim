@@ -447,7 +447,7 @@ function M.add_comment()
     id = "",
     author = { login = vim.g.octo_viewer },
     createdAt = vim.fn.strftime "%FT%TZ",
-    body = " ",
+    body = "",
     viewerCanUpdate = true,
     viewerCanDelete = true,
     viewerDidAuthor = true,
