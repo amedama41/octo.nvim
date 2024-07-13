@@ -244,7 +244,7 @@ function Layout:fix_foreign_windows()
   for _, id in ipairs(win_ids) do
     if not (id == self.file_panel.winid or id == self.left_winid or id == self.right_winid) then
       for k, v in pairs(win_reset_opts) do
-        vim.api.nvim_set_option_value(k, v, { win = id })
+        vim.api.nvim_set_option_value(k, v, { scope = 'local', win = id })
       end
     end
   end

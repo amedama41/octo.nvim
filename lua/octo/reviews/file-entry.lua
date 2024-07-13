@@ -508,7 +508,7 @@ end
 function M._configure_windows(left_winid, right_winid)
   for _, id in ipairs { left_winid, right_winid } do
     for k, v in pairs(FileEntry.winopts) do
-      vim.api.nvim_set_option_value(k, v, { win = id })
+      vim.api.nvim_set_option_value(k, v, { scope = 'local', win = id })
     end
   end
 end

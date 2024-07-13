@@ -107,7 +107,7 @@ function FilePanel:open()
   self.winid = vim.api.nvim_get_current_win()
 
   for k, v in pairs(FilePanel.winopts) do
-    vim.api.nvim_set_option_value(k, v, { win = self.winid })
+    vim.api.nvim_set_option_value(k, v, { scope = 'local', win = self.winid })
   end
 
   vim.cmd("buffer " .. self.bufid)

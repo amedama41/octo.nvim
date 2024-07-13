@@ -32,11 +32,11 @@ function M.create_border_header_float(opts)
     focusable = false,
   })
   vim.api.nvim_set_option_value("modifiable", false, { buf = outer_bufnr })
-  vim.api.nvim_set_option_value("foldcolumn", "0", { win = outer_winid })
-  vim.api.nvim_set_option_value("signcolumn", "no", { win = outer_winid })
-  vim.api.nvim_set_option_value("number", false, { win = outer_winid })
-  vim.api.nvim_set_option_value("relativenumber", false, { win = outer_winid })
-  vim.api.nvim_set_option_value("cursorline", false, { win = outer_winid })
+  vim.api.nvim_set_option_value("foldcolumn", "0", { scope = 'local', win = outer_winid })
+  vim.api.nvim_set_option_value("signcolumn", "no", { scope = 'local', win = outer_winid })
+  vim.api.nvim_set_option_value("number", false, { scope = 'local', win = outer_winid })
+  vim.api.nvim_set_option_value("relativenumber", false, { scope = 'local', win = outer_winid })
+  vim.api.nvim_set_option_value("cursorline", false, { scope = 'local', win = outer_winid })
   return outer_winid
 end
 
@@ -53,12 +53,12 @@ function M.create_content_float(opts)
       or (opts.height - 2 * opts.border_width),
     focusable = true,
   })
-  vim.api.nvim_set_option_value("previewwindow", true, { win = winid })
-  vim.api.nvim_set_option_value("foldcolumn", "0", { win = winid })
-  vim.api.nvim_set_option_value("signcolumn", "no", { win = winid })
-  vim.api.nvim_set_option_value("number", false, { win = winid })
-  vim.api.nvim_set_option_value("relativenumber", false, { win = winid })
-  vim.api.nvim_set_option_value("cursorline", false, { win = winid })
+  vim.api.nvim_set_option_value("previewwindow", true, { scope = 'local', win = winid })
+  vim.api.nvim_set_option_value("foldcolumn", "0", { scope = 'local', win = winid })
+  vim.api.nvim_set_option_value("signcolumn", "no", { scope = 'local', win = winid })
+  vim.api.nvim_set_option_value("number", false, { scope = 'local', win = winid })
+  vim.api.nvim_set_option_value("relativenumber", false, { scope = 'local', win = winid })
+  vim.api.nvim_set_option_value("cursorline", false, { scope = 'local', win = winid })
   return winid, bufnr
 end
 
@@ -175,10 +175,10 @@ function M.create_popup(opts)
     width = opts.width,
     height = opts.height,
   })
-  vim.api.nvim_set_option_value("foldcolumn", "0", { win = border_winid })
-  vim.api.nvim_set_option_value("signcolumn", "no", { win = border_winid })
-  vim.api.nvim_set_option_value("number", false, { win = border_winid })
-  vim.api.nvim_set_option_value("relativenumber", false, { win = border_winid })
+  vim.api.nvim_set_option_value("foldcolumn", "0", { scope = 'local', win = border_winid })
+  vim.api.nvim_set_option_value("signcolumn", "no", { scope = 'local', win = border_winid })
+  vim.api.nvim_set_option_value("number", false, { scope = 'local', win = border_winid })
+  vim.api.nvim_set_option_value("relativenumber", false, { scope = 'local', win = border_winid })
 
   utils.close_preview_autocmd({ "CursorMoved", "CursorMovedI", "WinLeave" }, border_winid, { current_bufnr })
   utils.close_preview_autocmd({ "CursorMoved", "CursorMovedI", "WinLeave" }, popup_winid, { current_bufnr })
