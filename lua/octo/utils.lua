@@ -326,7 +326,12 @@ function M.in_pr_branch(bufnr)
 
   local local_repo = M.get_remote_name()
   if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
-    return true
+    local get_hash_cmd = "git rev-parse HEAD"
+    local local_hash = string.gsub(vim.fn.system(get_hash_cmd), "%s+", "")
+    if local_hash == buffer.node.headRefOid then
+      return true
+    end
+    return false
   elseif buffer.node.baseRepository.nameWithOwner ~= local_repo then
     --M.error(string.format("Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
     return false
