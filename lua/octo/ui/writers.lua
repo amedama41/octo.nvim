@@ -571,7 +571,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
     ---@cast comment PullRequestReview
     -- Review top-level comments
     local state_bubble =
-      bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state] .. "Bubble")
+      bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker.Review" })
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading.Review" })
     --vim.list_extend(header_vt, author_bubble)
