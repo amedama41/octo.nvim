@@ -629,7 +629,7 @@ end
 ---@param bufnr integer
 ---@param thread ResolveReviewThread
 ---@param thread_id string
----@param thread_line integer?
+---@param thread_line integer
 local function update_review_thread_header(bufnr, thread, thread_id, thread_line)
   local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
   local end_line = thread.originalLine
@@ -646,7 +646,7 @@ local function update_review_thread_header(bufnr, thread, thread_id, thread_line
     commit = commit_id,
     isOutdated = thread.isOutdated,
     isResolved = thread.isResolved,
-  }, thread_line - 1)
+  }, thread_line)
   local threads = thread.pullRequest.reviewThreads.nodes
   local review = reviews.get_current_review()
   if review then

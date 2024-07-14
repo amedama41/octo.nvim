@@ -7,8 +7,8 @@ local M = {}
 ---@field reviewId string
 ---@field path string
 ---@field line number
----@field bufferStartLine integer
----@field bufferEndLine integer
+---@field bufferStartLine integer line of thread hreader
+---@field bufferEndLine integer line which thread end (inclusive)
 local ThreadMetadata = {}
 ThreadMetadata.__index = ThreadMetadata
 

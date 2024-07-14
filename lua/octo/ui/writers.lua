@@ -767,23 +767,21 @@ local function get_lnum_chunks(opts)
 end
 
 ---@param bufnr integer
+---@param thread_line integer
 ---@param diffhunk string
----@param start_line integer?
 ---@param comment_start integer
 ---@param comment_end integer
 ---@param comment_side DiffSide
-function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
+function M.write_thread_snippet(bufnr, thread_line, diffhunk, comment_start, comment_end, comment_side)
   -- this function will print a diff snippet from the diff hunk.
   -- we need to use the original positions for comment_start and comment_end
   -- since the diff hunk always use the original positions.
-
-  start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
   if not diffhunk then
-    return start_line, start_line
+    return
   end
 
   -- clear virtual texts
-  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, thread_line, thread_line + 1)
 
   -- generate maps from diffhunk line to code line:
   local diffhunk_lines = vim.split(diffhunk, "\n")
@@ -841,13 +839,6 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
     end
   end
   max_length = math.max(max_length, vim.fn.winwidth(0) - 10)
-
-  -- write empty lines to hold virtual text
-  local empty_lines = {}
-  for _ = snippet_start, snippet_end + 3 do
-    table.insert(empty_lines, "")
-  end
-  M.write_block(bufnr, empty_lines, start_line)
 
   -- prepare vt chunks
   local vt_lines = {}
@@ -907,26 +898,19 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   end
   table.insert(vt_lines, { { string.format("└%s┘", string.rep("─", max_length + 2)) } })
 
-  -- write snippet as virtual text
-  local line = start_line - 1
-  for _, vt_line in ipairs(vt_lines) do
-    M.write_virtual_text(bufnr, constants.OCTO_DIFFHUNK_VT_NS, line, vt_line)
-    line = line + 1
-  end
-
-  return start_line, line
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_DIFFHUNK_VT_NS, thread_line - 1, 0, {
+    virt_lines = vt_lines
+  })
 end
 
 ---@param bufnr integer
 ---@param opts { path: string, start_line: integer, end_line: integer, isOutdated: boolean, isResolved: boolean, resolvedBy: { login: string }, commit: string }
----@param line integer?
+---@param line integer
 function M.write_review_thread_header(bufnr, opts, line)
-  line = line or vim.api.nvim_buf_line_count(bufnr) - 1
-
   local conf = config.values
 
   -- clear virtual texts
-  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, line + 2)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line - 1, line)
 
   local header_vt = {
     { string.rep(" ", conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker.Thread" },
@@ -968,8 +952,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     "OctoTimelineSeparator.Thread",
   }
 
-  M.write_block(bufnr, { "" })
-  M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt, separator)
+  M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line - 1, header_vt, separator)
 end
 
 ---@param bufnr integer
@@ -1449,6 +1432,8 @@ function M.write_threads(bufnr, threads)
   local buffer = octo_buffers[bufnr]
   -- print each of the threads
   for _, thread in ipairs(threads) do
+    local thread_start = vim.api.nvim_buf_line_count(bufnr) + 1
+    local thread_end = thread_start
     local thread_metadata = ThreadMetadata:new {
       threadId = (thread.id ~= "" and thread.id) or nil,
       replyTo = thread.comments.nodes[1].id,
@@ -1456,10 +1441,9 @@ function M.write_threads(bufnr, threads)
       reviewId = thread.comments.nodes[1].pullRequestReview.id,
       path = thread.path,
       line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,
-      bufferStartLine = 0,
-      bufferEndLine = 0,
+      bufferStartLine = thread_start,
+      bufferEndLine = thread_end,
     }
-    local thread_start, thread_end
     for _, comment in ipairs(thread.comments.nodes) do
       -- augment comment details
       comment.path = thread.path
@@ -1481,6 +1465,7 @@ function M.write_threads(bufnr, threads)
         write_comment_opts.end_line = end_line
 
         -- write thread header
+        M.write_block(bufnr, { "" })
         M.write_review_thread_header(bufnr, {
           path = thread.path,
           start_line = start_line,
@@ -1489,15 +1474,11 @@ function M.write_threads(bufnr, threads)
           isResolved = thread.isResolved,
           resolvedBy = thread.resolvedBy,
           commit = comment.originalCommit.abbreviatedOid,
-        })
+        }, thread_start)
 
         if thread.subjectType == "LINE" then
           -- write snippet
-          thread_start, thread_end =
-            M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
-        else
-          thread_start = vim.api.nvim_buf_line_count(bufnr) + 1
-          thread_end = vim.api.nvim_buf_line_count(bufnr) + 1
+          M.write_thread_snippet(bufnr, thread_start, comment.diffHunk, start_line, end_line, thread.diffSide)
         end
       end
 
@@ -1505,14 +1486,13 @@ function M.write_threads(bufnr, threads)
       folds.create(bufnr, comment_start + 1, comment_end, true)
       thread_end = comment_end
     end
-    folds.create(bufnr, thread_start - 1, thread_end - 1, not thread.isCollapsed)
+    folds.create(bufnr, thread_start + 1, thread_end - 1, not thread.isCollapsed)
 
     -- mark the thread region
     local thread_mark_id = vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_THREAD_NS, thread_start - 1, 0, {
       end_line = thread_end,
       end_col = 0,
     })
-    thread_metadata.bufferStartLine = thread_start - 1
     thread_metadata.bufferEndLine = thread_end
     -- store thread info in the octo buffer for later reference
     buffer.threadsMetadata[tostring(thread_mark_id)] = thread_metadata

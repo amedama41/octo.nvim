@@ -1061,7 +1061,7 @@ function OctoBuffer:get_thread_at_line(line)
   for _, mark in ipairs(thread_marks) do
     local thread = self.threadsMetadata[tostring(mark[1])]
     if thread then
-      local startLine = mark[2] - 1
+      local startLine = mark[2] + 1
       local endLine = mark[4].end_row
       if startLine <= line and endLine >= line then
         thread.bufferStartLine = startLine
