@@ -347,9 +347,11 @@ function Review:add_comment(is_suggestion)
       diff_hunk = "@@ " .. diff_hunk
     end
   else
-    -- not printing diff hunk for added files
-    -- we will get the right diff hunk from the server when updating the threads
-    -- TODO: trigger a thread update?
+    local total_lines = vim.api.nvim_buf_line_count(bufnr)
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, line2, true)
+    diff_hunk = ("@@ -0,0 +1,%d @@\n"):format(total_lines) .. vim.iter(lines):map(function(line)
+      return "+" .. line
+    end):join("\n")
   end
 
   self.layout:ensure_layout()
