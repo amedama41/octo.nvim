@@ -521,6 +521,36 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
   }
 end
 
+---@param comment_metadata CommentMetadata
+function OctoBuffer:_update_thread_metadata(comment_metadata)
+  -- update thread map
+  local thread_id = comment_metadata.threadMetadata.threadId
+  ---@type integer|nil
+  local mark_id = nil
+  for markId, threadMetadata in pairs(self.threadsMetadata) do
+    if threadMetadata.threadId == thread_id then
+      mark_id = tonumber(markId)
+    end
+  end
+  if mark_id then
+    local extmark = vim.api.nvim_buf_get_extmark_by_id(
+      self.bufnr,
+      constants.OCTO_THREAD_NS,
+      mark_id,
+      { details = true }
+    )
+    local thread_start = extmark[1]
+    -- update extmark
+    vim.api.nvim_buf_del_extmark(self.bufnr, constants.OCTO_THREAD_NS, mark_id)
+    local thread_mark_id = vim.api.nvim_buf_set_extmark(self.bufnr, constants.OCTO_THREAD_NS, thread_start, 0, {
+      end_line = comment_metadata.endLine + 2,
+      end_col = 0,
+    })
+    self.threadsMetadata[tostring(thread_mark_id)] = self.threadsMetadata[tostring(mark_id)]
+    self.threadsMetadata[tostring(mark_id)] = nil
+  end
+end
+
 ---Replies to a review comment thread
 ---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_thread_comment(comment_metadata)
@@ -555,40 +585,7 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
 
           self:render_signs()
 
-          -- update thread map
-          local thread_id
-          for _, thread in ipairs(threads) do
-            for _, c in ipairs(thread.comments.nodes) do
-              if c.id == resp_comment.id then
-                thread_id = thread.id
-                break
-              end
-            end
-          end
-          ---@type integer|nil
-          local mark_id = nil
-          for markId, threadMetadata in pairs(self.threadsMetadata) do
-            if threadMetadata.threadId == thread_id then
-              mark_id = tonumber(markId)
-            end
-          end
-          if mark_id then
-            local extmark = vim.api.nvim_buf_get_extmark_by_id(
-              self.bufnr,
-              constants.OCTO_THREAD_NS,
-              mark_id,
-              { details = true }
-            )
-            local thread_start = extmark[1]
-            -- update extmark
-            vim.api.nvim_buf_del_extmark(self.bufnr, constants.OCTO_THREAD_NS, mark_id)
-            local thread_mark_id = vim.api.nvim_buf_set_extmark(self.bufnr, constants.OCTO_THREAD_NS, thread_start, 0, {
-              end_line = comment_end + 2,
-              end_col = 0,
-            })
-            self.threadsMetadata[tostring(thread_mark_id)] = self.threadsMetadata[tostring(mark_id)]
-            self.threadsMetadata[tostring(mark_id)] = nil
-          end
+          self:_update_thread_metadata(comment_metadata)
         end
       end
     end,
@@ -806,6 +803,8 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
             comment_metadata.savedBody = resp.body
             comment_metadata.dirty = false
             self:render_signs()
+
+            self:_update_thread_metadata(comment_metadata)
           end
         else
           utils.error "Failed to create thread"
