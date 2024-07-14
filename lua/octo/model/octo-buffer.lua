@@ -570,12 +570,10 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
         ---@type AddPullRequestReviewCommentMutationResponse
         local resp = vim.fn.json_decode(output)
         local resp_comment = resp.data.addPullRequestReviewComment.comment
-        local comment_end
         if utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
           comment_metadata.id = resp_comment.id
           comment_metadata.savedBody = resp_comment.body
           comment_metadata.dirty = false
-          comment_end = comment_metadata.endLine
 
           local threads = resp_comment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
