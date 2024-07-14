@@ -528,7 +528,7 @@ function M.delete_comment()
   local query, threadId
   if comment.kind == "IssueComment" then
     query = graphql("delete_issue_comment_mutation", comment.id)
-  elseif comment.kind == "PullRequestReviewComment" then
+  elseif comment.kind == "PullRequestReviewComment" or comment.kind == "PullRequestComment" then
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
     local _thread = buffer:get_thread_at_cursor()
     if not _thread then

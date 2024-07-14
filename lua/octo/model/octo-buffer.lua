@@ -768,7 +768,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
 end
 
 ---@class GithubReply
----@field id integer
+---@field node_id string
 ---@field body string
 
 ---Replies a review thread w/o creating a new review
@@ -799,7 +799,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
         local resp = vim.fn.json_decode(output)
         if not utils.is_blank(resp) then
           if utils.trim(comment_metadata.body) == utils.trim(resp.body) then
-            comment_metadata.id = tostring(resp.id)
+            comment_metadata.id = resp.node_id
             comment_metadata.savedBody = resp.body
             comment_metadata.dirty = false
             self:render_signs()
@@ -822,7 +822,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
   local update_query
   if comment_metadata.kind == "IssueComment" then
     update_query = graphql("update_issue_comment_mutation", comment_metadata.id, comment_metadata.body)
-  elseif comment_metadata.kind == "PullRequestReviewComment" then
+  elseif comment_metadata.kind == "PullRequestReviewComment" or comment_metadata.kind == "PullRequestComment" then
     update_query = graphql("update_pull_request_review_comment_mutation", comment_metadata.id, comment_metadata.body)
   elseif comment_metadata.kind == "PullRequestReview" then
     update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
@@ -838,7 +838,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
         local resp_comment
         if comment_metadata.kind == "IssueComment" then
           resp_comment = resp.data.updateIssueComment.issueComment
-        elseif comment_metadata.kind == "PullRequestReviewComment" then
+        elseif comment_metadata.kind == "PullRequestReviewComment" or comment_metadata.kind == "PullRequestComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
             resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
