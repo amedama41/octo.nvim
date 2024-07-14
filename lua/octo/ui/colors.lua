@@ -140,6 +140,10 @@ local function get_hl_links()
     StateClosedFloat = "OctoRedFloat",
     StateMergedFloat = "OctoPurpleFloat",
     StateDraftFloat = "OctoGreyFloat",
+
+    ["CommentBlock.Review"] = "Normal",
+    ["CommentBlock.Comment"] = "NormalFloat",
+    ["CommentBlock.ThreadComment"] = "NormalFloat",
   }
 end
 

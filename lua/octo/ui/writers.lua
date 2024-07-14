@@ -566,6 +566,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
   -- )
 
   local separator = nil
+  local hl_group = ""
   if kind == "PullRequestReview" then
     ---@cast comment PullRequestReview
     -- Review top-level comments
@@ -584,6 +585,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.review, 240), "OctoTimelineSeparator.Review" }
+    hl_group = "OctoCommentBlock.Review"
   elseif kind == "PullRequestReviewComment" or kind == "PullRequestComment" then
     ---@cast comment PullRequestReviewComment
     -- Review thread comments
@@ -603,6 +605,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.thread_comment, 240), "OctoTimelineSeparator.ThreadComment" }
+    hl_group = "OctoCommentBlock.ThreadComment"
   elseif kind == "IssueComment" then
     ---@cast comment IssueComment
     -- Issue comments
@@ -617,6 +620,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.comment, 240), "OctoTimelineSeparator.Comment" }
+    hl_group = "OctoCommentBlock.Comment"
   end
   local comment_vt_ns = vim.api.nvim_create_namespace ""
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt, separator)
@@ -646,6 +650,12 @@ function M.write_comment(bufnr, comment, kind, line, opts)
     reaction_line = M.write_reactions(bufnr, comment.reactionGroups, line)
     line = line + 2
   end
+
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_COMMENT_NS, start_line - 1, 0, {
+    end_row = line - 2,
+    end_col = 0,
+    line_hl_group = hl_group,
+  })
 
   -- update metadata
   local mark =

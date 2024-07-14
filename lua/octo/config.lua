@@ -111,7 +111,7 @@ function M.get_default_values()
       comment = "=",
       review = "=",
       thread = "-",
-      thread_comment = "- ",
+      thread_comment = "",
       event = " ",
     },
     right_bubble_delimiter = "",
