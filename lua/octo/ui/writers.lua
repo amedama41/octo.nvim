@@ -576,7 +576,7 @@ function M.write_comment(bufnr, comment, kind, line, opts)
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading.Review" })
     --vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, {
-      comment.author.login .. " ",
+      comment.author.login,
       comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
     })
     vim.list_extend(header_vt, state_bubble)
