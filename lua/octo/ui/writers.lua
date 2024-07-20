@@ -473,6 +473,39 @@ function M.write_details(bufnr, issue, update)
       local user_bubble = bubbles.make_user_bubble(name, is_viewer)
       vim.list_extend(merged_by_vt, user_bubble)
       table.insert(details, merged_by_vt)
+    else
+      local merge_state_map = {
+        BEHIND = "The head ref is out of date.",
+        BLOCKED = "The merge is blocked.",
+        CLEAN = "Mergeable and passing commit status.",
+        DIRTY = "The merge commit cannot be cleanly created.",
+        DRAFT = "The merge is blocked due to the pull request being a draft.",
+        HAS_HOOKS = "Mergeable with passing commit status and pre-receive hooks.",
+        UNKNOWN = "The state cannot currently be determined.",
+        UNSTABLE = "Mergeable with non-passing commit status.",
+      }
+      local merge_state_vt = {
+        { "Merge state: ", "OctoDetailsLabel" },
+        { issue.mergeStateStatus, "OctoDetailsValue" },
+        { " (", "OctoDetailsValue" },
+        { merge_state_map[issue.mergeStateStatus], "OctoDetailsValue" },
+        { ")", "OctoDetailsValue" },
+      }
+      table.insert(details, merge_state_vt)
+      local mergenable_map = {
+        CONFLICTING = { "The pull request cannot be merged due to merge conflicts.", "OctoRed" },
+        MERGEABLE = { "The pull request can be merged.", "OctoGreen" },
+        UNKNOWN = { "The mergeability of the pull request is still being calculated.", "OctoYellow" },
+      }
+      local description = mergenable_map[issue.mergeable]
+      local mergenable_vt = {
+        { "Mergenable: ", "OctoDetailsLabel" },
+        { issue.mergeable, description[2] },
+        { " (", "OctoDetailsValue" },
+        { description[1], "OctoDetailsValue" },
+        { ")", "OctoDetailsValue" },
+      }
+      table.insert(details, mergenable_vt)
     end
 
     -- from/into branches

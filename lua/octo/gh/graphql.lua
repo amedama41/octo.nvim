@@ -728,6 +728,9 @@ M.update_pull_request_mutation = [[
   }
 ]]
 
+---@alias MergeStateStatus "BEHIND"|"BLOCKED"|"CLEAN"|"DIRTY"|"DRAFT"|"HAS_HOOKS"|"UNKNOWN"|"UNSTABLE"
+---@alias MergeableState "CONFLICTING"|"MERGEABLE"|"UNKNOWN"
+
 ---@class PullRequest
 ---@field id string
 ---@field isDraft boolean
@@ -741,6 +744,8 @@ M.update_pull_request_mutation = [[
 ---@field url string
 ---@field repository { nameWithOwner: string }
 ---@field files { nodes: PullRequestChangedFile[] }
+---@field mergeStateStatus MergeStateStatus
+---@field mergeable MergeableState
 ---@field merged boolean
 ---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }?
 ---@field participants { nodes: { login: string }[] }
@@ -789,6 +794,8 @@ M.update_pull_request_state_mutation = [[
             viewerViewedState
           }
         }
+        mergeStateStatus
+        mergeable
         merged
         mergedBy {
           ... on Organization { name }
@@ -1139,6 +1146,8 @@ query($endCursor: String) {
           viewerViewedState
         }
       }
+      mergeStateStatus
+      mergeable
       merged
       mergedBy {
         ... on Organization { name }
