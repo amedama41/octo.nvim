@@ -19,6 +19,8 @@ local win_reset_opts = {
 ---@field tabpage integer
 ---@field left Rev
 ---@field right Rev
+---@field local_left boolean
+---@field local_right boolean
 ---@field file_panel FilePanel
 ---@field left_winid integer
 ---@field right_winid integer
@@ -29,17 +31,31 @@ local win_reset_opts = {
 local Layout = {}
 Layout.__index = Layout
 
+---@class LayoutOpts
+---@field left Rev
+---@field right Rev
+---@field files FileEntry[]
+
 ---Layout constructor
+---@param opt LayoutOpts
 ---@return Layout
 function Layout:new(opt)
   local this = {
     left = opt.left,
     right = opt.right,
+    local_right = false,
+    local_left = false,
     thread_winid = -1,
     files = opt.files,
     file_idx = 1,
     ready = false,
   }
+  utils.commit_exists(this.right.commit, function(exists)
+    this.local_right = exists
+  end)
+  utils.commit_exists(this.left.commit, function(exists)
+    this.local_left = exists
+  end)
   this.file_panel = FilePanel:new(this.files)
   setmetatable(this, self)
   return this

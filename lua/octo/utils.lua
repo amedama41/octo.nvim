@@ -263,7 +263,7 @@ function M.commit_exists(commit, cb)
         cb(false)
       end
     end),
-  }):start()
+  }):sync()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -304,10 +304,10 @@ function M.in_pr_repo()
   end
 end
 
----@param bufnr number?
+---@param bufnr number
+---@param hash string
 ---@return boolean
-function M.in_pr_branch(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
+function M.in_pr_branch(bufnr, hash)
   local buffer = octo_buffers[bufnr]
   if not buffer then
     return false
@@ -328,7 +328,7 @@ function M.in_pr_branch(bufnr)
   if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
     local get_hash_cmd = "git rev-parse HEAD"
     local local_hash = string.gsub(vim.fn.system(get_hash_cmd), "%s+", "")
-    if local_hash == buffer.node.headRefOid then
+    if local_hash == hash then
       return true
     end
     return false

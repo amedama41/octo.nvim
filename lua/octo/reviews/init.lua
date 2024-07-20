@@ -146,23 +146,30 @@ function Review:focus_commit(right, left)
 end
 
 ---Initiates (starts/resumes) a review
----@param opts { left: Rev, right: Rev }?
-function Review:initiate(opts)
-  opts = opts or {}
+function Review:initiate()
   local pr = self.pull_request
   local conf = config.values
-  if conf.use_local_fs and not utils.in_pr_branch(pr.bufnr) then
+  if conf.use_local_fs and not utils.in_pr_branch(pr.bufnr, pr.right.commit) then
     local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
     if choice == 1 then
       utils.checkout_pr_sync(pr.number)
     end
   end
 
+  local cmd = {"git", "merge-base", pr.left.commit, pr.right.commit}
+  local result = vim.system(cmd, { text = true }):wait()
+  if result.code ~= 0 then
+    utils.error "not resolve merge base"
+    return
+  end
+  local merge_base = vim.trim(result.stdout)
+  pr.merge_base = Rev:new(merge_base)
+
   -- create the layout
   self.layout = Layout:new {
     -- TODO: rename to left_rev and right_rev
-    left = opts.left or pr.left,
-    right = opts.right or pr.right,
+    left = pr.merge_base,
+    right = pr.right,
     files = {},
   }
   self.layout:open(self)
@@ -502,7 +509,7 @@ end
 function Review:get_level()
   local review_level = "COMMIT"
   if
-    self.layout.left.commit == self.pull_request.left.commit
+    self.layout.left.commit == self.pull_request.merge_base.commit
     and self.layout.right.commit == self.pull_request.right.commit
   then
     review_level = "PR"

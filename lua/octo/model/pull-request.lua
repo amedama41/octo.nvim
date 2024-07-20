@@ -12,8 +12,7 @@ local M = {}
 ---@field bufnr integer?
 ---@field left Rev
 ---@field right Rev
----@field local_right boolean
----@field local_left boolean
+---@field merge_base Rev?
 ---@field files table<string, FileViewedState>
 ---@field diff string
 local OctoPullRequest = {}
@@ -41,6 +40,7 @@ function OctoPullRequest:new(opts)
     id = opts.id,
     left = opts.left,
     right = opts.right,
+    merge_base = nil,
     local_right = false,
     local_left = false,
     bufnr = opts.bufnr,
@@ -51,12 +51,6 @@ function OctoPullRequest:new(opts)
     this.files[file.path] = file.viewerViewedState
   end
   this.owner, this.name = utils.split_repo(this.repo)
-  utils.commit_exists(this.right.commit, function(exists)
-    this.local_right = exists
-  end)
-  utils.commit_exists(this.left.commit, function(exists)
-    this.local_left = exists
-  end)
 
   setmetatable(this, self)
 
@@ -73,12 +67,6 @@ M.PullRequest = OctoPullRequest
 function OctoPullRequest:update(left, right, files)
   self.left = left
   self.right = right
-  utils.commit_exists(self.right.commit, function(exists)
-    self.local_right = exists
-  end)
-  utils.commit_exists(self.left.commit, function(exists)
-    self.local_left = exists
-  end)
   self.files = {}
   for _, file in ipairs(files) do
     self.files[file.path] = file.viewerViewedState

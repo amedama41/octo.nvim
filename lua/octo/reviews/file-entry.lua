@@ -190,10 +190,11 @@ function FileEntry:fetch()
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
   assert(current_review ~= nil)
-  local right_sha = current_review.layout.right.commit
-  local left_sha = current_review.layout.left.commit
-  local right_abbrev = current_review.layout.right:abbrev()
-  local left_abbrev = current_review.layout.left:abbrev()
+  local layout = current_review.layout
+  local right_sha = layout.right.commit
+  local left_sha = layout.left.commit
+  local right_abbrev = layout.right:abbrev()
+  local left_abbrev = layout.left:abbrev()
   local conf = config.values
 
   -- handle renamed files
@@ -202,7 +203,7 @@ function FileEntry:fetch()
   end
 
   -- fetch right version
-  if self.pull_request.local_right then
+  if layout.local_right then
     utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
     end)
@@ -213,7 +214,7 @@ function FileEntry:fetch()
   end
 
   -- fetch left version
-  if self.pull_request.local_left then
+  if layout.local_left then
     utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
     end)
@@ -251,11 +252,15 @@ function FileEntry:load_buffers(left_winid, right_winid)
     },
   }
 
+  local current_review = require("octo.reviews").get_current_review()
+  assert(current_review ~= nil)
+  local layout = current_review.layout
+
   -- configure diff buffers
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
       local conf = config.values
-      local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr)
+      local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr, layout.right.commit)
 
       -- create buffer
       split.bufid = M._create_buffer {

@@ -446,7 +446,7 @@ function M.review_commits(callback)
           },
           parents = {
             {
-              sha = current_review.pull_request.left.commit,
+              sha = current_review.pull_request.merge_base.commit,
             },
           },
         })
