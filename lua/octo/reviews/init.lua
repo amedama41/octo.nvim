@@ -160,10 +160,11 @@ function Review:initiate()
   local result = vim.system(cmd, { text = true }):wait()
   if result.code ~= 0 then
     utils.error "not resolve merge base"
-    return
+    pr.merge_base = pr.left
+  else
+    local merge_base = vim.trim(result.stdout)
+    pr.merge_base = Rev:new(merge_base)
   end
-  local merge_base = vim.trim(result.stdout)
-  pr.merge_base = Rev:new(merge_base)
 
   -- create the layout
   self.layout = Layout:new {
