@@ -599,7 +599,8 @@ function M.write_comment(bufnr, comment, kind, line, opts)
   -- )
 
   local separator = nil
-  local hl_group = ""
+  local header_hl_group = ""
+  local comment_hl_group = ""
   if kind == "PullRequestReview" then
     ---@cast comment PullRequestReview
     -- Review top-level comments
@@ -613,12 +614,13 @@ function M.write_comment(bufnr, comment, kind, line, opts)
       comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
     })
     vim.list_extend(header_vt, state_bubble)
-    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate.Review" })
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.review, 240), "OctoTimelineSeparator.Review" }
-    hl_group = "OctoCommentBlock.Review"
+    header_hl_group = "OctoCommentHeader.Review"
+    comment_hl_group = "OctoCommentBlock.Review"
   elseif kind == "PullRequestReviewComment" or kind == "PullRequestComment" then
     ---@cast comment PullRequestReviewComment
     -- Review thread comments
@@ -633,12 +635,13 @@ function M.write_comment(bufnr, comment, kind, line, opts)
         bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
       vim.list_extend(header_vt, state_bubble)
     end
-    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate.ThreadComment" })
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.thread_comment, 240), "OctoTimelineSeparator.ThreadComment" }
-    hl_group = "OctoCommentBlock.ThreadComment"
+    header_hl_group = "OctoCommentHeader.ThreadComment"
+    comment_hl_group = "OctoCommentBlock.ThreadComment"
   elseif kind == "IssueComment" then
     ---@cast comment IssueComment
     -- Issue comments
@@ -648,15 +651,16 @@ function M.write_comment(bufnr, comment, kind, line, opts)
     if comment.author ~= vim.NIL then
       table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     end
-    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate.Comment" })
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
     end
     separator = { string.rep(conf.timeline_separators.comment, 240), "OctoTimelineSeparator.Comment" }
-    hl_group = "OctoCommentBlock.Comment"
+    header_hl_group = "OctoCommentHeader.Comment"
+    comment_hl_group = "OctoCommentBlock.Comment"
   end
   local comment_vt_ns = vim.api.nvim_create_namespace ""
-  M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt, separator)
+  M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt, separator, header_hl_group)
 
   if kind == "PullRequestReview" and utils.is_blank(comment.body) then
     -- do not render empty review comments
@@ -684,10 +688,10 @@ function M.write_comment(bufnr, comment, kind, line, opts)
     line = line + 2
   end
 
-  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_COMMENT_NS, start_line - 1, 0, {
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_COMMENT_NS, start_line, 0, {
     end_row = line - 2,
     end_col = 0,
-    line_hl_group = hl_group,
+    line_hl_group = comment_hl_group,
   })
 
   -- update metadata
@@ -995,7 +999,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     "OctoTimelineSeparator.Thread",
   }
 
-  M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line - 1, header_vt, separator)
+  M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line - 1, header_vt, separator, "OctoCommentHeader.Thread")
 end
 
 ---@param bufnr integer
@@ -1269,7 +1273,7 @@ function M.write_assigned_event(bufnr, item)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   table.insert(vt, { " assigned this to ", "OctoTimelineItemHeading.Event" })
   table.insert(vt, { item.assignee.login or item.assignee.name, "OctoDetailsLabel" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1291,11 +1295,11 @@ function M.write_commit_event(bufnr, item)
       item.commit.committer.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
     })
   end
-  table.insert(vt, { " added ", "OctoTimelineItemHeading" })
+  table.insert(vt, { " added ", "OctoTimelineItemHeading.Event" })
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
-  table.insert(vt, { " '", "OctoTimelineItemHeading" })
+  table.insert(vt, { " '", "OctoTimelineItemHeading.Event" })
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
-  table.insert(vt, { " " .. utils.format_date(item.commit.committedDate), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.commit.committedDate), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1312,11 +1316,11 @@ function M.write_merged_event(bufnr, item)
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading.Event" })
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-  table.insert(vt, { " merged commit ", "OctoTimelineItemHeading" })
+  table.insert(vt, { " merged commit ", "OctoTimelineItemHeading.Event" })
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
-  table.insert(vt, { " into ", "OctoTimelineItemHeading" })
-  table.insert(vt, { item.mergeRefName, "OctoTimelineItemHeading" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " into ", "OctoTimelineItemHeading.Event" })
+  table.insert(vt, { item.mergeRefName, "OctoTimelineItemHeading.Event" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1334,7 +1338,7 @@ function M.write_closed_event(bufnr, item)
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   table.insert(vt, { " closed this ", "OctoTimelineItemHeading" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1364,16 +1368,16 @@ function M.write_labeled_events(bufnr, items, action)
     --vim.list_extend(vt, actor_bubble)
     if actor ~= vim.NIL then
       table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-      table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading" })
+      table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading.Event" })
     else
-      table.insert(vt, { action .. " ", "OctoTimelineItemHeading" })
+      table.insert(vt, { action .. " ", "OctoTimelineItemHeading.Event" })
     end
     local labels = labels_by_actor[actor]
     for _, label in ipairs(labels) do
       local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
       vim.list_extend(vt, label_bubble)
     end
-    table.insert(vt, { #labels > 1 and "labels" or "label", "OctoTimelineItemHeading" })
+    table.insert(vt, { #labels > 1 and "labels" or "label", "OctoTimelineItemHeading.Event" })
     write_event(bufnr, vt)
   end
 end
@@ -1391,8 +1395,8 @@ function M.write_reopened_event(bufnr, item)
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading.Event" })
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-  table.insert(vt, { " reopened this ", "OctoTimelineItemHeading" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " reopened this ", "OctoTimelineItemHeading.Event" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1411,12 +1415,12 @@ function M.write_review_requested_event(bufnr, item)
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.requestedReviewer == vim.NIL then
-    table.insert(vt, { " requested a review", "OctoTimelineItemHeading" })
+    table.insert(vt, { " requested a review", "OctoTimelineItemHeading.Event" })
   else
-    table.insert(vt, { " requested a review from ", "OctoTimelineItemHeading" })
+    table.insert(vt, { " requested a review from ", "OctoTimelineItemHeading.Event" })
     table.insert(vt, { item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser" })
   end
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1434,12 +1438,12 @@ function M.write_review_request_removed_event(bufnr, item)
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.requestedReviewer == vim.NIL then
-    table.insert(vt, { " removed a review request", "OctoTimelineItemHeading" })
+    table.insert(vt, { " removed a review request", "OctoTimelineItemHeading.Event" })
   else
-    table.insert(vt, { " removed a review request for ", "OctoTimelineItemHeading" })
+    table.insert(vt, { " removed a review request for ", "OctoTimelineItemHeading.Event" })
     table.insert(vt, { item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser" })
   end
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1456,13 +1460,13 @@ function M.write_review_dismissed_event(bufnr, item)
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading.Event" })
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-  table.insert(vt, { " dismissed a review", "OctoTimelineItemHeading" })
+  table.insert(vt, { " dismissed a review", "OctoTimelineItemHeading.Event" })
   if item.dismissalMessage ~= vim.NIL then
-    table.insert(vt, { " [", "OctoTimelineItemHeading" })
+    table.insert(vt, { " [", "OctoTimelineItemHeading.Event" })
     table.insert(vt, { item.dismissalMessage, "OctoUser" })
-    table.insert(vt, { "]", "OctoTimelineItemHeading" })
+    table.insert(vt, { "]", "OctoTimelineItemHeading.Event" })
   end
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate.Event" })
   write_event(bufnr, vt)
 end
 
@@ -1549,7 +1553,8 @@ end
 ---@param line integer
 ---@param chunks string[][]
 ---@param separator string[]?
-function M.write_virtual_text(bufnr, ns, line, chunks, separator)
+---@param line_hl_group string?
+function M.write_virtual_text(bufnr, ns, line, chunks, separator, line_hl_group)
   local opts = {
     virt_text = chunks,
     virt_text_pos = "overlay",
@@ -1561,6 +1566,9 @@ function M.write_virtual_text(bufnr, ns, line, chunks, separator)
       virt_lines_above = true,
       virt_lines_leftcol = true,
     })
+  end
+  if line_hl_group ~= nil then
+    opts.line_hl_group = line_hl_group
   end
   pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, opts)
 end

@@ -141,6 +141,9 @@ local function get_hl_links()
     StateMergedFloat = "OctoPurpleFloat",
     StateDraftFloat = "OctoGreyFloat",
 
+    ["CommentHeader.Review"] = "Normal",
+    ["CommentHeader.Comment"] = "NormalFloat",
+    ["CommentHeader.ThreadComment"] = "NormalFloat",
     ["CommentBlock.Review"] = "Normal",
     ["CommentBlock.Comment"] = "NormalFloat",
     ["CommentBlock.ThreadComment"] = "NormalFloat",
@@ -161,7 +164,7 @@ function M.setup()
   end
 
   for _, type in pairs { "Review", "Thread", "ThreadComment", "Comment", "Event" } do
-    for _, group in pairs { "TimelineItemHeading", "TimelineMarker", "TimelineSeparator" } do
+    for _, group in pairs { "TimelineItemHeading", "TimelineMarker", "TimelineSeparator", "Date" } do
       vim.cmd("hi def link Octo" .. group .. "." .. type .. " Octo" .. group)
     end
   end
@@ -197,6 +200,8 @@ local function color_is_bright(r, g, b)
   end
 end
 
+---@param highlight_group_name string
+---@return string?
 function M.get_background_color_of_highlight_group(highlight_group_name)
   local highlight_group = vim.api.nvim_get_hl(0, { name = highlight_group_name, link = false })
   local highlight_group_normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
