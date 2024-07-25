@@ -2553,6 +2553,8 @@ M.create_pr_mutation = [[
             viewerViewedState
           }
         }
+        mergeStateStatus
+        mergeable
         merged
         mergedBy {
           ... on Organization { name }
