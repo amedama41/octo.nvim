@@ -2432,7 +2432,7 @@ query($endCursor: String) {
 ---@alias RepositoryQueryResponse GraphQLResponse<{ repository: Repository }>
 
 M.repository_query = [[
-query {
+query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     id
     nameWithOwner
@@ -2469,7 +2469,7 @@ query {
       name
       color
     }
-    refs(last:100, refPrefix: "refs/heads/") {
+    refs(first:100, refPrefix: "refs/heads/", after: $endCursor) {
       nodes {
         name
       }

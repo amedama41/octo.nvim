@@ -453,7 +453,7 @@ function M.get_repo_info(repo)
     local owner, name = M.split_repo(repo)
     local query = graphql("repository_query", owner, name)
     local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
     ---@type RepositoryQueryResponse
